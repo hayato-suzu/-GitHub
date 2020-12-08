@@ -1,0 +1,210 @@
+#define FONT_TANU_PATH			TEXT(".\\FONT\\azukiP.ttf")	//フォントの場所
+#define FONT_TANU_NAME			TEXT("あずきフォントP")			//フォントの名前
+
+
+
+enum GAME_SCENE {
+	GAME_SCENE_START,
+	GAME_SCENE_CHOICE,
+	GAME_SCENE_PLAY,
+	GAME_SCENE_RUSULT,
+	GAME_SCENE_END,
+};	//ゲームのシーン
+
+
+
+VOID MY_START(VOID);		//スタート画面
+VOID MY_START_PROC(VOID);	//スタート画面の処理
+VOID MY_START_DRAW(VOID);	//スタート画面の描画
+
+VOID MY_CHOICE(VOID);       //
+VOID MY_CHOICE_PROC(VOID);  //
+VOID MY_CHOICE_DRAW(VOID);  //
+
+VOID MY_PLAY(VOID);			//プレイ画面
+VOID MY_PLAY_PROC(VOID);	//プレイ画面の処理
+VOID MY_PLAY_DRAW(VOID);	//プレイ画面の描画
+
+VOID MY_RUSULT(VOID);       //
+VOID MY_RUSULT_PROC(VOID);  //
+VOID MY_RUSULT_DRAW(VOID);  //
+
+VOID MY_END(VOID);			//エンド画面
+VOID MY_END_PROC(VOID);		//エンド画面の処理
+VOID MY_END_DRAW(VOID);		//エンド画面の描画
+
+
+
+		//シーンごとに処理を行う
+		switch (GameScene)
+		{
+		case GAME_SCENE_START:
+			MY_START();	//スタート画面
+			break;
+		case GAME_SCENE_CHOICE:
+			MY_CHOICE();//選択画面
+			break;
+		case GAME_SCENE_PLAY:
+			MY_PLAY();	//プレイ画面
+			break;
+		case GAME_SCENE_RUSULT:
+			MY_RUSULT();//リザルト画面
+			break;
+		case GAME_SCENE_END:
+			MY_END();	//エンド画面
+			break;
+		}
+
+
+//スタート画面
+VOID MY_START(VOID)
+{
+	MY_START_PROC();	//スタート画面の処理
+	MY_START_DRAW();	//スタート画面の描画
+
+	return;
+}
+
+//スタート画面の処理
+VOID MY_START_PROC(VOID)
+{
+	//エンターキーを押したら、選択シーンへ移動する
+	if (MY_KEY_DOWN(KEY_INPUT_RETURN) == TRUE)
+	{
+		GameScene = GAME_SCENE_CHOICE;
+	}
+
+	return;
+}
+
+//スタート画面の描画
+VOID MY_START_DRAW(VOID)
+{
+	//赤の四角を描画
+	DrawBox(10, 10, GAME_WIDTH - 10, GAME_HEIGHT - 10, GetColor(255, 0, 0), TRUE);
+
+	DrawString(0, 0, "スタート画面(エンターキーを押して下さい)", GetColor(255, 255, 255));
+	return;
+}
+
+//選択画面
+VOID MY_CHOICE(VOID)
+{
+	MY_CHOICE_PROC();
+	MY_CHOICE_DRAW();
+
+	return;
+}
+
+//選択画面の処理
+VOID MY_CHOICE_PROC(VOID)
+{
+
+	//Gを押したら、プレイシーンへ移動する
+	if (CheckHitKey(KEY_INPUT_G) != 0)
+	{
+		GameScene = GAME_SCENE_PLAY;
+	}
+	return;
+}
+//選択画面の描画
+VOID MY_CHOICE_DRAW(VOID)
+{
+	//赤の四角を描画
+	DrawBox(10, 10, GAME_WIDTH - 10, GAME_HEIGHT - 10, GetColor(255, 255, 0), TRUE);
+
+	DrawString(0, 0, "選択画面(Gを押して下さい)", GetColor(255, 255, 255));
+	return;
+	return;
+}
+
+//プレイ画面
+VOID MY_PLAY(VOID)
+{
+	MY_PLAY_PROC();	//プレイ画面の処理
+	MY_PLAY_DRAW();	//プレイ画面の描画
+
+	return;
+}
+
+//プレイ画面の処理
+VOID MY_PLAY_PROC(VOID)
+{
+	//スペースキーを押したら、エンドシーンへ移動する
+	if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
+	{
+		GameScene = GAME_SCENE_RUSULT;
+	}
+
+	return;
+}
+
+//プレイ画面の描画
+VOID MY_PLAY_DRAW(VOID)
+{
+	//緑の四角を描画
+	DrawBox(10, 10, GAME_WIDTH - 10, GAME_HEIGHT - 10, GetColor(0, 255, 0), TRUE);
+
+	DrawString(0, 0, "プレイ画面(スペースキーを押して下さい)", GetColor(255, 255, 255));
+	return;
+}
+
+//リザルト画面
+VOID MY_RUSULT(VOID)
+{
+	MY_RUSULT_PROC();
+	MY_RUSULT_DRAW();
+
+	return;
+}
+
+//リザルト画面の処理
+VOID MY_RUSULT_PROC(VOID)
+{
+
+	//Gを押したら、プレイシーンへ移動する
+	if (CheckHitKey(KEY_INPUT_K) != 0)
+	{
+		GameScene = GAME_SCENE_END;
+	}
+	return;
+}
+//リザルト画面の描画
+VOID MY_RUSULT_DRAW(VOID)
+{
+	//赤の四角を描画
+	DrawBox(10, 10, GAME_WIDTH - 10, GAME_HEIGHT - 10, GetColor(0, 255, 255), TRUE);
+
+	DrawString(0, 0, "リザルト画面(Kを押して下さい)", GetColor(255, 255, 255));
+	return;
+}
+
+//エンド画面
+VOID MY_END(VOID)
+{
+	MY_END_PROC();	//エンド画面の処理
+	MY_END_DRAW();	//エンド画面の描画
+	return;
+}
+
+//エンド画面の処理
+VOID MY_END_PROC(VOID)
+{
+	//エスケープキーを押したら、スタートシーンへ移動する
+	if (MY_KEY_DOWN(KEY_INPUT_ESCAPE) == TRUE)
+	{
+		GameScene = GAME_SCENE_START;
+	}
+
+	return;
+}
+
+//エンド画面の描画
+VOID MY_END_DRAW(VOID)
+{
+	//青の四角を描画
+	DrawBox(10, 10, GAME_WIDTH - 10, GAME_HEIGHT - 10, GetColor(0, 0, 255), TRUE);
+
+	DrawString(0, 0, "エンド画面(エスケープキーを押して下さい)", GetColor(255, 255, 255));
+	return;
+}
