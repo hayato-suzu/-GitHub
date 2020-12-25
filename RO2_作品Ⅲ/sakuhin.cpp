@@ -39,7 +39,7 @@
 //画像のパス================================================================================
 #define IMAGE_BACK_PATH			TEXT(".\\IMAGE\\play.png")	       //プレイ背景の画像
 #define IMAGE_PLAYER_PATH		TEXT(".\\IMAGE\\player\\player1.png")	   //プレイヤー1の画像
-#define IMAGE_PLAYER2_PATH      TEXT(".\\IMAGE\\player\\player2.png")      //プレイヤー２の画像
+#define IMAGE_PLAYER1_PATH      TEXT(".\\IMAGE\\player\\player2.png")      //プレイヤー２の画像
 #define IMAGE_TITLE_PATH        TEXT(".\\IMAGE\\title.png")        //タイトルの背景
 #define IMAGE_CHOICE_PATH       TEXT(".\\IMAGE\\choice.png")       //選択画面の背景
 //#define IMAGE_PLAY_PATH         TEXT(".\\IMAGE\\play.png")         //プレイの背景
@@ -228,8 +228,8 @@ IMAGE ImageChoice;  //選択画面の背景
 IMAGE ImagePlay;    //プレイ画面の背景
 IMAGE ImageRusult;  //リザルト背景
 IMAGE ImageEnd;     //エンド背景
-
-CHARA player;		//ゲームのキャラ
+IMAGE player1;      //キャラの画像
+CHARA player;		//カーソルの画像
 
 //=============================================================================
 
@@ -321,7 +321,23 @@ VOID MY_DELETE_IMAGE(VOID);		//画像をまとめて削除する関数
 BOOL MY_LOAD_MUSIC(VOID);		//音楽をまとめて読み込む関数
 VOID MY_DELETE_MUSIC(VOID);		//音楽をまとめて削除する関数
 
+//キャラクター座標------------------------------------------
+int x = 300, yy = 240;
+//グラフィックハンドル格納用配列
+int gh[12];
 
+//移動係数
+float move = 1.0f;
+
+//横方向と縦方向のカウント
+int xcount = 0, ycount = 0;
+
+//添字用関数
+int ix = 0, iy = 0, result = 0;
+
+//キャラクタの動きの処理
+VOID MY_KYARA_MOVE(VOID);
+//---------------------------------------------------
 //########## プログラムで最初に実行される関数 ##########
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -487,7 +503,6 @@ VOID MY_FPS_WAIT(VOID)
 //########## キーの入力状態を更新する関数 ##########
 VOID MY_ALL_KEYDOWN_UPDATE(VOID)
 {
-	//参考：https://dxlib.xsrv.jp/function/dxfunc_input.html
 
 	char TempKey[256];	//一時的に、現在のキーの入力状態を格納する
 
@@ -900,6 +915,7 @@ VOID MY_PLAY_PROC(VOID)
 	}
 
 	//▲▲▲▲▲ プログラム追加ここまで ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+	
 
 	return;
 }
@@ -908,25 +924,12 @@ VOID MY_PLAY_PROC(VOID)
 VOID MY_PLAY_DRAW(VOID)
 {
 
-	//背景を描画する========================================================
-	DrawGraph(ImageBack.x, ImageBack.y, ImageBack.handle, TRUE);
-
-	//マップの描画
-	for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
-	{
-		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
-		{
-			//マップを描画
-			DrawGraph(
-				map[tate][yoko].x,
-				map[tate][yoko].y,
-				mapChip.handle[map[tate][yoko].kind],
-				TRUE);
-		}
-	}
-	//====================================================================
 	//プレイヤーのを描画する
-	DrawGraph(player.image.x, player.image.y, player.image.handle, TRUE);
+	//DrawGraph(player.image.x, player.image.y, player.image.handle, TRUE);
+		//プレイヤの描画
+	MY_KYARA_MOVE();
+
+	//------------------------------------------------
 
 	DrawString(0, 0, "プレイ画面(スペースキーを押して下さい)", GetColor(255, 255, 255));
 	return;
@@ -1039,6 +1042,242 @@ VOID MY_END_DRAW(VOID)
 	return;
 }
 
+
+VOID MY_KYARA_MOVE(VOID)
+{
+	//キャラクタの動く処理
+	while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0 && GetHitKeyStateAll(AllKeyState) == 0) {
+
+		if (AllKeyState[KEY_INPUT_LEFT] == 1 || AllKeyState[KEY_INPUT_RIGHT] == 1) {
+
+
+
+			if (AllKeyState[KEY_INPUT_UP] == 1 || AllKeyState[KEY_INPUT_DOWN] == 1) {
+
+				//移動係数を０．７１に設定
+
+				move = 0.71f;
+
+			}
+			else {
+
+				//斜めじゃなければ１．０に設定
+
+				move = 1.0f;
+
+			}
+
+		}
+		else if (AllKeyState[KEY_INPUT_UP] == 1 || AllKeyState[KEY_INPUT_DOWN] == 1) {
+
+			move = 1.0f;
+
+		}
+
+
+
+
+
+		if (AllKeyState[KEY_INPUT_LEFT] == 1) {
+
+			x -= (int)4 * move;
+
+		}
+
+		if (AllKeyState[KEY_INPUT_RIGHT] == 1) {
+
+			x += (int)4 * move;
+
+
+
+		}
+
+		if (AllKeyState[KEY_INPUT_UP] == 1) {
+
+			yy -= (int)4 * move;
+
+
+
+		}
+
+		if (AllKeyState[KEY_INPUT_DOWN] == 1) {
+
+			yy += (int)4 * move;
+
+
+
+		}
+
+
+
+		//左キーが押されてて、かつxcountが０以上なら０にしてから１引く。
+
+		//それ以外は１引く
+
+		if (AllKeyState[KEY_INPUT_LEFT] == 1) {
+
+			if (xcount > 0)
+
+				xcount = 0;
+
+			--xcount;
+
+
+
+		}
+
+		//右キーが押されてて、かつxcountが０以下なら０にしてから１足す。
+
+		//それ以外は１引く
+
+		if (AllKeyState[KEY_INPUT_RIGHT] == 1) {
+
+			if (xcount < 0)
+
+				xcount = 0;
+
+			++xcount;
+
+		}
+
+		//上キーが押されてて、かつycountが０以上なら０にしてから１引く。
+
+		//それ以外は１引く
+
+		if (AllKeyState[KEY_INPUT_UP] == 1) {
+
+			if (ycount > 0)
+
+				ycount = 0;
+
+			--ycount;
+
+		}
+
+		//下キーが押されてて、かつycountが０以下なら０にしてから１足す。
+
+		//それ以外は１足す
+
+		if (AllKeyState[KEY_INPUT_DOWN] == 1) {
+
+			if (ycount < 0)
+
+				ycount = 0;
+
+			++ycount;
+
+		}
+
+
+
+
+
+		//カウント数から添字を求める。
+
+		ix = abs(xcount) % 30 / 10;
+
+		iy = abs(ycount) % 30 / 10;
+
+
+
+		//xカウントがプラスなら右向きなので2行目の先頭添字番号を足す。
+
+		if (xcount > 0) {
+
+			ix += 3;
+
+			result = ix;
+
+		}
+		else if (xcount < 0) {
+
+			//マイナスなら左向きなので、4行目の先頭添字番号を足す。
+
+			ix += 9;
+
+			result = ix;
+
+		}
+
+
+
+		//yカウントがプラスなら下向きなので、3行目の先頭添字番号を足す。
+
+		if (ycount > 0) {
+
+			iy += 6;
+
+			result = iy;
+
+		}
+		else if (ycount < 0) {
+
+			//１行目の先頭添字番号は０なので何もする必要なし。(分かりやすくするために書いときました)
+
+			iy += 0;
+
+			result = iy;
+
+		}
+
+
+
+		//斜め移動の場合は横顔を優先
+
+		if (move == 0.71f)
+
+			result = ix;
+
+		
+		//背景を描画する========================================================
+		DrawGraph(ImageBack.x, ImageBack.y, ImageBack.handle, TRUE);
+
+		//マップの描画
+		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
+		{
+			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
+			{
+				//マップを描画
+				DrawGraph(
+					map[tate][yoko].x,
+					map[tate][yoko].y,
+					mapChip.handle[map[tate][yoko].kind],
+					TRUE);
+			}
+		}
+		//====================================================================
+
+		//キャラクタの描画
+		DrawGraph(x, yy, gh[result], TRUE);
+
+		//押されてなければカウントをゼロにする。
+
+		if (AllKeyState[KEY_INPUT_LEFT] != 1 && AllKeyState[KEY_INPUT_RIGHT] != 1) {
+
+			xcount = 0;
+
+		}
+
+		if (AllKeyState[KEY_INPUT_UP] != 1 && AllKeyState[KEY_INPUT_DOWN] != 1) {
+
+			ycount = 0;
+
+		}
+
+
+
+
+
+	//	if (AllKeyState[KEY_INPUT_ESCAPE] == 1)
+	//	{
+	//		break;
+	//}
+	}
+
+
+	//ここまで--------------------------------------------------------------------
+	return;
+}
 //画像をまとめて読み込む関数
 BOOL MY_LOAD_IMAGE(VOID)
 {
@@ -1111,7 +1350,7 @@ BOOL MY_LOAD_IMAGE(VOID)
 	//==============================================================================================
 
 	
-	//プレイヤーの画像
+	//プレイヤーの画像(カーソル）
 	strcpy_s(player.image.path, IMAGE_PLAYER_PATH);		//パスの設定
 	player.image.handle = LoadGraph(player.image.path);	//読み込み
 	if (player.image.handle == -1)
@@ -1126,7 +1365,9 @@ BOOL MY_LOAD_IMAGE(VOID)
 	player.CenterX = player.image.x + player.image.width / 2;		//画像の横の中心を探す
 	player.CenterY = player.image.y + player.image.height / 2;		//画像の縦の中心を探す
 	player.speed = CHARA_SPEED_LOW;									//スピードを設定
-
+	//------------------------------------------------------------------
+	LoadDivGraph("player2.png", 12, 3, 4, 49, 66, gh);
+    //キャラクタ-----------------------------
 	//マップの画像を分割する--------------------------------------------------------------
 	int mapRes = LoadDivGraph(
 		GAME_MAP_PATH,										//赤弾のパス
@@ -1177,10 +1418,12 @@ VOID MY_DELETE_IMAGE(VOID)
 	DeleteGraph(ImageChoice.handle);
 	DeleteGraph(ImageRusult.handle);
 	DeleteGraph(ImageEnd.handle);
+	DeleteGraph(player1.handle);
 	//マップ削除
 	for (int i_num = 0; i_num < MAP_DIV_NUM; i_num++) { DeleteGraph(mapChip.handle[i_num]); }
 	//-------------------
 	//プレイヤーの削除
+	//DeleteGraph(".\\IMAGE\\player\\player2");
 	return;
 }
 
