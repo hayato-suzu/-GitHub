@@ -13,7 +13,7 @@
 #define GAME_COLOR			32	//画面のカラービット
 
 #define GAME_WINDOW_BAR		0	//タイトルバーはデフォルトにする
-#define GAME_WINDOW_NAME	"GAME TITLE"	//ウィンドウのタイトル
+#define GAME_WINDOW_NAME	"実力比べ"	//ウィンドウのタイトル
 
 #define GAME_FPS			60	//FPSの数値	
 
@@ -38,8 +38,9 @@
 
 //画像のパス================================================================================
 #define IMAGE_BACK_PATH			TEXT(".\\IMAGE\\play.png")	       //プレイ背景の画像
-#define IMAGE_PLAYER_PATH		TEXT(".\\IMAGE\\player\\player1.png")	   //プレイヤー1の画像
+#define IMAGE_PLAYER_PATH		TEXT(".\\IMAGE\\player\\player1.png")	   //プレイヤー1の画像(カーソル）
 #define IMAGE_PLAYER1_PATH      TEXT(".\\IMAGE\\player\\player2.png")      //プレイヤー２の画像
+//#define IMAGE_PLAYER2_PATH      TEXT(".\\IMAGE\\play")
 #define IMAGE_TITLE_PATH        TEXT(".\\IMAGE\\title.png")        //タイトルの背景
 #define IMAGE_CHOICE_PATH       TEXT(".\\IMAGE\\choice.png")       //選択画面の背景
 //#define IMAGE_PLAY_PATH         TEXT(".\\IMAGE\\play.png")         //プレイの背景
@@ -72,6 +73,21 @@
 #define MAP_DIV_YOKO		4	//画像を横に分割する数
 #define MAP_DIV_NUM	MAP_DIV_TATE * MAP_DIV_YOKO	//画像を分割する総数
 
+//弾の設定----------------------------------------------------△
+#define TAMA_CHANGE_MAX      5  //5フレーム目で弾の画像を変える
+#define TAMA_MAX            16  //最大16発まで
+
+#define TAMA_RED_PATH       TEXT(".\\IMAGE\\TAMA\\red.png")  //赤弾の画像
+
+#define TAMA_DIV_WIDTH      16  //画像を分割する幅サイズ
+#define TAMA_DIV_HEIGHT     16  //画像を分割する高さサイズ
+
+#define TAMA_DIV_TATE        3  //画像を縦に分割する数
+#define TAMA_DIV_YOKO        1  //画像を横に分割する数
+
+#define TAMA_DIV_NUM     TAMA_DIV_TATE*TAMA_DIV_YOKO  //画像を分割する総数
+//----------------------------------------------------------△
+
 //エラーメッセージ
 #define START_ERR_TITLE		TEXT("スタート位置エラー")
 #define START_ERR_CAPTION	TEXT("スタート位置が決まっていません")
@@ -81,7 +97,11 @@
 #define MOUSE_ERR_CLICK_TITLE     TEXT("スタート位置エラー")
 #define MOUSE_ERR_CLICK_CAPTION   TEXT("スタート位置が決まっていません")
 
-//-------------------------------------------------------
+
+//終了ダイアログ用----------△
+#define MOUSE_R_CLICK_TITLE       TEXT("ゲーム中断")
+#define MOUSE_R_CLICK_CAPTION     TEXT("ゲームを中断し、タイトル画面に戻りますか？")
+//-------------------------------------------------------△
 
 enum GAME_MAP_KIND
 {
@@ -165,6 +185,22 @@ typedef struct STRUCT_MUSIC
 	int handle;					//ハンドル
 }MUSIC;	//音楽構造体
 
+//弾--------------△
+typedef struct STRUCT_TAMA
+{
+	char path[PATH_MAX];
+	int handle[TAMA_DIV_NUM];
+	int x;
+	int y;
+	int width;
+	int height;
+	BOOL IsDraw;
+	int nowImageKind;
+	int changeImageCnt;
+	int changeImageCntMAX;
+	int speed;
+}TAMA;//弾の構造体
+//-----------------△
 
 typedef struct STRUCT_CHARA
 {
@@ -180,6 +216,11 @@ typedef struct STRUCT_CHARA
 	int ShotReLoadCnt;			//ショットリロード時間
 	int ShotReLoadCntMAX;		//ショットリロード時間(MAX)
 
+	TAMA tama[TAMA_MAX];         //ショットする弾
+	//追加------------------------------------△
+	RECT coll;                   //当たり判定
+	iPOINT collBeforePt;         //当たる前の座標
+	//-----------------------------------------△
 	//
 }CHARA;	//キャラクター構造体
 
@@ -272,6 +313,10 @@ MAP map[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
 
 //スタートの位置
 iPOINT startPt{ -1,-1 };
+
+//マップの当たり判定--------------△
+RECT mapColl[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
+//----------------------------------△
 //=======================================================================
 
 //########## プロトタイプ宣言 ##########
@@ -335,8 +380,8 @@ int xcount = 0, ycount = 0;
 //添字用関数
 int ix = 0, iy = 0, result = 0;
 
-//キャラクタの動きの処理
-VOID MY_KYARA_MOVE(VOID);
+
+
 //---------------------------------------------------
 //########## プログラムで最初に実行される関数 ##########
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
@@ -742,7 +787,7 @@ VOID MY_START_PROC(VOID)
 
 		SetMouseDispFlag(TRUE);		//マウスカーソルを表示
 
-		
+
 		GameScene = GAME_SCENE_CHOICE;
 
 		return;
@@ -890,7 +935,7 @@ VOID MY_PLAY_PROC(VOID)
 	//▼▼▼▼▼ プログラム追加ここから ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
 
 	//マウスの左ボタンをクリックしたとき
-	if (MY_MOUSE_DOWN(MOUSE_INPUT_LEFT) == TRUE)
+	if (MY_MOUSE_DOWN(KEY_INPUT_A) == TRUE)
 	{
 		//ショットが撃てるとき
 		if (player.CanShot == TRUE)
@@ -898,6 +943,26 @@ VOID MY_PLAY_PROC(VOID)
 			//ショット発射！！
 			PlaySoundMem(player.musicShot.handle, DX_PLAYTYPE_BACK);
 			player.CanShot = FALSE;
+
+			//空いているスロットで、弾の描画をする
+			for (int cnt = 0; cnt < TAMA_MAX; cnt++)
+			{
+				if (player.tama[cnt].IsDraw == FALSE)
+				{
+					//弾のX位置はプレイヤーの中心から発射
+					player.tama[cnt].x = player.CenterX - player.tama[cnt].width / 2;
+
+					//弾のY位置はプレイヤーの上部分から発射
+					player.tama[cnt].y = player.image.y;
+
+					//弾を描画する
+					player.tama[cnt].IsDraw = TRUE;
+
+					break;
+				}
+			}
+
+
 		}
 	}
 
@@ -915,7 +980,7 @@ VOID MY_PLAY_PROC(VOID)
 	}
 
 	//▲▲▲▲▲ プログラム追加ここまで ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-	
+
 
 	return;
 }
@@ -925,128 +990,8 @@ VOID MY_PLAY_DRAW(VOID)
 {
 
 	//プレイヤーのを描画する
-	//DrawGraph(player.image.x, player.image.y, player.image.handle, TRUE);
-		//プレイヤの描画
-	MY_KYARA_MOVE();
-
-	//------------------------------------------------
-
-	DrawString(0, 0, "プレイ画面(スペースキーを押して下さい)", GetColor(255, 255, 255));
-	return;
-}
-
-//リザルト画面
-VOID MY_RUSULT(VOID)
-{
-	MY_RUSULT_PROC();
-	MY_RUSULT_DRAW();
-
-	return;
-}
-
-//リザルト画面の処理
-VOID MY_RUSULT_PROC(VOID)
-{
-
-	//Gを押したら、プレイシーンへ移動する
-	if (CheckHitKey(KEY_INPUT_K) != 0)
-	{
-
-		//BGMが流れているなら
-		if (CheckSoundMem(BGM_RUSULT.handle) != 0)
-		{
-			StopSoundMem(BGM_RUSULT.handle);	//BGMを止める
-		}
-
-		SetMouseDispFlag(TRUE);		//マウスカーソルを表示
-
-		GameScene = GAME_SCENE_END;
-		return;
-	}
-
-	//BGMが流れていないなら
-	if (CheckSoundMem(BGM_RUSULT.handle) == 0)
-	{
-		//BGMの音量を下げる
-		ChangeVolumeSoundMem(255 * 50 / 100, BGM_RUSULT.handle);	//50%の音量にする
-
-		//BGMを流す
-		//DX_PLAYTYPE_NORMAL:　ノーマル再生
-		//DX_PLAYTYPE_BACK  : バックグラウンド再生
-		//DX_PLAYTYPE_LOOP  : ループ再生
-		PlaySoundMem(BGM_RUSULT.handle, DX_PLAYTYPE_LOOP);
-	}
-
-	return;
-}
-//リザルト画面の描画
-VOID MY_RUSULT_DRAW(VOID)
-{
-	//背景を描画する
-	DrawGraph(ImageRusult.x, ImageRusult.y, ImageRusult.handle, TRUE);
-
-	DrawString(0, 0, "リザルト画面(Kを押して下さい)", GetColor(255, 255, 255));
-	return;
-}
-
-//エンド画面
-VOID MY_END(VOID)
-{
-	MY_END_PROC();	//エンド画面の処理
-	MY_END_DRAW();	//エンド画面の描画
-	return;
-}
-
-//エンド画面の処理
-VOID MY_END_PROC(VOID)
-{
-	//エスケープキーを押したら、スタートシーンへ移動する
-	if (MY_KEY_DOWN(KEY_INPUT_ESCAPE) == TRUE)
-	{
-		//BGMが流れているなら
-		if (CheckSoundMem(BGM_END.handle) != 0)
-		{
-			StopSoundMem(BGM_END.handle);	//BGMを止める
-		}
-
-		SetMouseDispFlag(TRUE);		//マウスカーソルを表示
-
-		GameScene = GAME_SCENE_START;
-		return;
-	}
-
-	//BGMが流れていないなら
-	if (CheckSoundMem(BGM_END.handle) == 0)
-	{
-		//BGMの音量を下げる
-		ChangeVolumeSoundMem(255 * 50 / 100, BGM_END.handle);	//50%の音量にする
-
-		//BGMを流す
-		//DX_PLAYTYPE_NORMAL:　ノーマル再生
-		//DX_PLAYTYPE_BACK  : バックグラウンド再生
-		//DX_PLAYTYPE_LOOP  : ループ再生
-		PlaySoundMem(BGM_END.handle, DX_PLAYTYPE_LOOP);
-	}
-
-
-	return;
-}
-
-//エンド画面の描画
-VOID MY_END_DRAW(VOID)
-{
-	//背景を描画する
-	DrawGraph(ImageEnd.x, ImageEnd.y, ImageEnd.handle, TRUE);
-
-	DrawString(0, 0, "エンド画面(エスケープキーを押して下さい)", GetColor(255, 255, 255));
-	return;
-}
-
-
-VOID MY_KYARA_MOVE(VOID)
-{
-	//キャラクタの動く処理
-	while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0 && GetHitKeyStateAll(AllKeyState) == 0) {
+		
+	//while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0 && GetHitKeyStateAll(AllKeyState) == 0) {
 
 		if (AllKeyState[KEY_INPUT_LEFT] == 1 || AllKeyState[KEY_INPUT_RIGHT] == 1) {
 
@@ -1228,7 +1173,7 @@ VOID MY_KYARA_MOVE(VOID)
 
 			result = ix;
 
-		
+
 		//背景を描画する========================================================
 		DrawGraph(ImageBack.x, ImageBack.y, ImageBack.handle, TRUE);
 
@@ -1249,6 +1194,8 @@ VOID MY_KYARA_MOVE(VOID)
 
 		//キャラクタの描画
 		DrawGraph(x, yy, gh[result], TRUE);
+		DrawGraph(player.image.x, player.image.y, player.image.handle, TRUE);
+
 
 		//押されてなければカウントをゼロにする。
 
@@ -1268,16 +1215,177 @@ VOID MY_KYARA_MOVE(VOID)
 
 
 
-	//	if (AllKeyState[KEY_INPUT_ESCAPE] == 1)
-	//	{
-	//		break;
+		//if (AllKeyState[KEY_INPUT_ESCAPE] == 1)
+		//{
+		//	break;
+		//}
+
+		//弾の情報を生成
+		for (int cnt = 0; cnt < TAMA_MAX; cnt++)
+		{
+			//描画できる弾の処理
+			if (player.tama[cnt].IsDraw == TRUE)
+			{
+				//弾を描画する
+				DrawGraph(
+					player.tama[cnt].x,
+					player.tama[cnt].y,
+					player.tama[cnt].handle[player.tama[cnt].nowImageKind],	//現在の画像の種類にあったハンドル
+					TRUE);
+
+				//弾の表示フレームを増やす
+				if (player.tama[cnt].changeImageCnt < player.tama[cnt].changeImageCntMAX)
+				{
+					player.tama[cnt].changeImageCnt++;
+				}
+				else
+				{
+					//現在表示している弾の種類が、まだあるとき
+					if (player.tama[cnt].nowImageKind < TAMA_DIV_NUM - 1)	//-1しないと、最後の種類のときに++されてしまう
+					{
+						player.tama[cnt].nowImageKind++;	//弾を次の種類にする
+					}
+					else
+					{
+						player.tama[cnt].nowImageKind = 0;	//弾の種類をリセットする
+					}
+
+					player.tama[cnt].changeImageCnt = 0;
+				}
+
+				//弾を上に移動させる
+				if (player.tama[cnt].y < 0)
+				{
+					player.tama[cnt].IsDraw = FALSE;	//描画終了
+				}
+				else
+				{
+					player.tama[cnt].y -= player.tama[cnt].speed;
+				}
+			}
+		}
+
+		DrawString(0, 0, "プレイ画面(スペースキーを押して下さい)", GetColor(255, 255, 255));
+
 	//}
+
+	//------------------------------------------------
+
+	
+	
+	return;
+}
+
+//リザルト画面
+VOID MY_RUSULT(VOID)
+{
+	MY_RUSULT_PROC();
+	MY_RUSULT_DRAW();
+
+	return;
+}
+
+//リザルト画面の処理
+VOID MY_RUSULT_PROC(VOID)
+{
+
+	//Gを押したら、プレイシーンへ移動する
+	if (CheckHitKey(KEY_INPUT_K) != 0)
+	{
+
+		//BGMが流れているなら
+		if (CheckSoundMem(BGM_RUSULT.handle) != 0)
+		{
+			StopSoundMem(BGM_RUSULT.handle);	//BGMを止める
+		}
+
+		SetMouseDispFlag(TRUE);		//マウスカーソルを表示
+
+		GameScene = GAME_SCENE_END;
+		return;
+	}
+
+	//BGMが流れていないなら
+
+
+	if (CheckSoundMem(BGM_RUSULT.handle) == 0)
+	{
+		//BGMの音量を下げる
+		ChangeVolumeSoundMem(255 * 50 / 100, BGM_RUSULT.handle);	//50%の音量にする
+
+		//BGMを流す
+		//DX_PLAYTYPE_NORMAL:　ノーマル再生
+		//DX_PLAYTYPE_BACK  : バックグラウンド再生
+		//DX_PLAYTYPE_LOOP  : ループ再生
+		PlaySoundMem(BGM_RUSULT.handle, DX_PLAYTYPE_LOOP);
+	}
+
+	return;
+}
+//リザルト画面の描画
+VOID MY_RUSULT_DRAW(VOID)
+{
+	//背景を描画する
+	DrawGraph(ImageRusult.x, ImageRusult.y, ImageRusult.handle, TRUE);
+
+	DrawString(0, 0, "リザルト画面(Kを押して下さい)", GetColor(255, 255, 255));
+	return;
+}
+
+//エンド画面
+VOID MY_END(VOID)
+{
+	MY_END_PROC();	//エンド画面の処理
+	MY_END_DRAW();	//エンド画面の描画
+	return;
+}
+
+//エンド画面の処理
+VOID MY_END_PROC(VOID)
+{
+	//エスケープキーを押したら、スタートシーンへ移動する
+	if (MY_KEY_DOWN(KEY_INPUT_ESCAPE) == TRUE)
+	{
+		//BGMが流れているなら
+		if (CheckSoundMem(BGM_END.handle) != 0)
+		{
+			StopSoundMem(BGM_END.handle);	//BGMを止める
+		}
+
+		SetMouseDispFlag(TRUE);		//マウスカーソルを表示
+
+		GameScene = GAME_SCENE_START;
+		return;
+	}
+
+	//BGMが流れていないなら
+	if (CheckSoundMem(BGM_END.handle) == 0)
+	{
+		//BGMの音量を下げる
+		ChangeVolumeSoundMem(255 * 50 / 100, BGM_END.handle);	//50%の音量にする
+
+		//BGMを流す
+		//DX_PLAYTYPE_NORMAL:　ノーマル再生
+		//DX_PLAYTYPE_BACK  : バックグラウンド再生
+		//DX_PLAYTYPE_LOOP  : ループ再生
+		PlaySoundMem(BGM_END.handle, DX_PLAYTYPE_LOOP);
 	}
 
 
-	//ここまで--------------------------------------------------------------------
 	return;
 }
+
+//エンド画面の描画
+VOID MY_END_DRAW(VOID)
+{
+	//背景を描画する
+	DrawGraph(ImageEnd.x, ImageEnd.y, ImageEnd.handle, TRUE);
+
+	DrawString(0, 0, "エンド画面(エスケープキーを押して下さい)", GetColor(255, 255, 255));
+	return;
+}
+
+
 //画像をまとめて読み込む関数
 BOOL MY_LOAD_IMAGE(VOID)
 {
@@ -1293,9 +1401,9 @@ BOOL MY_LOAD_IMAGE(VOID)
 	GetGraphSize(ImageBack.handle, &ImageBack.width, &ImageBack.height);	//画像の幅と高さを取得
 	ImageBack.x = GAME_WIDTH / 2 - ImageBack.width / 2;		//左右中央揃え
 	ImageBack.y = GAME_HEIGHT / 2 - ImageBack.height / 2;	//上下中央揃え
-	
+
 	//============================================================================================
-	
+
 	//タイトル背景画像
 	strcpy_s(ImageTitle.path, IMAGE_TITLE_PATH);
 	ImageTitle.handle = LoadGraph(ImageTitle.path);
@@ -1349,7 +1457,7 @@ BOOL MY_LOAD_IMAGE(VOID)
 	ImageEnd.y = GAME_HEIGHT / 2 - ImageEnd.height / 2;
 	//==============================================================================================
 
-	
+
 	//プレイヤーの画像(カーソル）
 	strcpy_s(player.image.path, IMAGE_PLAYER_PATH);		//パスの設定
 	player.image.handle = LoadGraph(player.image.path);	//読み込み
@@ -1367,7 +1475,7 @@ BOOL MY_LOAD_IMAGE(VOID)
 	player.speed = CHARA_SPEED_LOW;									//スピードを設定
 	//------------------------------------------------------------------
 	LoadDivGraph("player2.png", 12, 3, 4, 49, 66, gh);
-    //キャラクタ-----------------------------
+	//キャラクタ-----------------------------
 	//マップの画像を分割する--------------------------------------------------------------
 	int mapRes = LoadDivGraph(
 		GAME_MAP_PATH,										//赤弾のパス
@@ -1406,6 +1514,67 @@ BOOL MY_LOAD_IMAGE(VOID)
 	}
 
 	//-----------------------------------------------------------------------------------------------
+		//赤弾の画像を分割するーーーーーーーーーー△
+	int tamaRedRes = LoadDivGraph(
+		TAMA_RED_PATH,										//赤弾のパス
+		TAMA_DIV_NUM, TAMA_DIV_TATE, TAMA_DIV_YOKO,			//赤弾を分割する数
+		TAMA_DIV_WIDTH, TAMA_DIV_HEIGHT,					//画像を分割するの幅と高さ
+		&player.tama[0].handle[0]);							//分割した画像が入るハンドル
+
+	/*なぜか読み込める？？？*/
+
+	if (tamaRedRes == -1)
+	{
+		//エラーメッセージ表示
+		MessageBox(GetMainWindowHandle(), TAMA_RED_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
+		return FALSE;
+	}
+
+	//幅と高さを取得
+	GetGraphSize(player.tama[0].handle[0], &player.tama[0].width, &player.tama[0].height);
+
+	//弾の情報を生成
+	for (int cnt = 0; cnt < TAMA_MAX; cnt++)
+	{
+		//パスをコピー
+		strcpyDx(player.tama[cnt].path, TEXT(TAMA_RED_PATH));
+
+		for (int i_num = 0; i_num < TAMA_DIV_NUM; i_num++)
+		{
+			//ハンドルをコピー
+			player.tama[cnt].handle[i_num] = player.tama[0].handle[i_num];
+		}
+
+		//幅をコピー
+		player.tama[cnt].width = player.tama[0].width;
+
+		//高さをコピー
+		player.tama[cnt].height = player.tama[0].height;
+
+		//弾のX位置はプレイヤーの中心から発射
+		player.tama[cnt].x = player.CenterX - player.tama[cnt].width / 2;
+
+		//弾のY位置はプレイヤーの上部分から発射
+		player.tama[cnt].y = player.image.y;
+
+		//弾は最初は非表示
+		player.tama[cnt].IsDraw = FALSE;
+
+		//弾の表示カウントを0にする
+		player.tama[cnt].changeImageCnt = 0;
+
+		//弾の表示カウントMAXを設定する
+		player.tama[cnt].changeImageCntMAX = TAMA_CHANGE_MAX;
+
+		//現在の画像の種類を初期化する
+		player.tama[cnt].nowImageKind = 0;
+
+		//弾のスピードを設定する
+		player.tama[cnt].speed = CHARA_SPEED_LOW;
+	}
+
+	//------------------------------△
+
 	return TRUE;
 }
 
@@ -1424,6 +1593,8 @@ VOID MY_DELETE_IMAGE(VOID)
 	//-------------------
 	//プレイヤーの削除
 	//DeleteGraph(".\\IMAGE\\player\\player2");
+	for (int i_num = 0; i_num < TAMA_DIV_NUM; i_num++) { DeleteGraph(player.tama[0].handle[i_num]); }
+
 	return;
 }
 
@@ -1440,7 +1611,7 @@ BOOL MY_LOAD_MUSIC(VOID)
 		MessageBox(GetMainWindowHandle(), MUSIC_BGM_PATH, MUSIC_LOAD_ERR_TITLE, MB_OK);
 		return FALSE;
 	}
-	
+
 	//リザルトBGM
 	strcpy_s(BGM_RUSULT.path, MUSIC_RUEULT_BGM_PATH);         //パスの設定
 	BGM_RUSULT.handle = LoadSoundMem(BGM_RUSULT.path);        //読込
