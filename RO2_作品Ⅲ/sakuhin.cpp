@@ -47,6 +47,7 @@
 #define IMAGE_RUSULT_PATH       TEXT(".\\IMAGE\\rusult.png")       //リザルト背景
 #define IMAGE_END_PATH          TEXT(".\\IMAGE\\end.png")          //エンド背景
 
+
 //エラーメッセージ
 #define MUSIC_LOAD_ERR_TITLE	TEXT("音楽読み込みエラー")
 
@@ -217,6 +218,7 @@ typedef struct STRUCT_CHARA
 	int ShotReLoadCntMAX;		//ショットリロード時間(MAX)
 
 	TAMA tama[TAMA_MAX];         //ショットする弾
+
 	//追加------------------------------------△
 	RECT coll;                   //当たり判定
 	iPOINT collBeforePt;         //当たる前の座標
@@ -271,7 +273,7 @@ IMAGE ImagePlay;    //プレイ画面の背景
 IMAGE ImageRusult;  //リザルト背景
 IMAGE ImageEnd;     //エンド背景
 CHARA player2;      //キャラの画像
-CHARA player;		//カーソルの画像
+//CHARA player;		//カーソルの画像
 
 //=============================================================================
 
@@ -371,11 +373,57 @@ BOOL MY_CHECK_MAP1_PLAYER_COLL(RECT); //マップとプレイヤーの当たり判定をする関数
 BOOL MY_CHECK_RECT_COLL(RECT, RECT);  //領域の当たり判定をする関数
 
 //キャラクター座標------------------------------------------
-int kx = 200, ky = 240;
 //グラフィックハンドル格納用配列
+int kyara[12];
+
+int ix = 0,  iy = 0, byougae = 0;
+
+//ジャンプ関数1.22
+
+float jux = 300.0f;
+float juy = 300.0f;
+float yadd = 0.0f;
 
 
 //---------------------------------------------------
+
+//スタート画面の文字の位置---------------------1.27
+const static int Play_y = 240;  //「ゲームスタート」ｙの位置
+const static int Exit_y = 270;  //「EXIT」のｙの位置
+
+typedef enum {      //スタート画面選択枠
+	Start_Coice,    //次の画面へ
+	Start_Exit,     //EXIT
+
+	Start_Num,      //項目の数
+};
+
+int S_coice_y = 0;    //選択□のｙの位置
+
+static int Now_coice = Start_Coice;  //選択中
+//--------------1.27
+//選択画面の文字の位置----------------------1.29
+const static int Coice_ken_y = 100;    //剣キャラ１のｙの位置
+const static int Coice_kobu_y = 200;   //拳キャラ１のｙの位置
+const static int Coice_ken2_y = 300;   //剣キャラ２のｙの位置
+const static int Coice_kobu2_y = 400;  //拳キャラ２のｙの位置
+
+typedef enum {   //選択画面選択枠
+	Coice_ken,   //剣キャラ１
+	Coice_kobu,  //拳キャラ１
+	Coice_ken2,  //剣キャラ２
+	Coice_kobu2, //拳キャラ２
+
+	Coice_Num,  //項目合計
+};
+
+int C_1p_coice_y = 0;               //１プレイヤの選択ｙの位置
+int C_2p_coice_y = 0;               //２プレイヤの選択ｙの位置
+
+static int C_1p_NOW_coice = Coice_ken;    //初期化
+static int C_2p_NOW_coice = Coice_ken;
+//------------------------------1.29
+//----------------------------------------------------------
 //########## プログラムで最初に実行される関数 ##########
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -396,9 +444,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if (MY_LOAD_MUSIC() == FALSE) { return -1; }
 
 	//プレイヤーの設定
-	player.CanShot = TRUE;
-	player.ShotReLoadCnt = 0;
-	player.ShotReLoadCntMAX = CHARA_RELOAD_LOW;
+	player2.CanShot = TRUE;
+	player2.ShotReLoadCnt = 0;
+	player2.ShotReLoadCntMAX = CHARA_RELOAD_LOW;
 
 
 	//フォントを一時的にインストール
@@ -413,31 +461,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	SetDrawScreen(DX_SCREEN_BACK);	//Draw系関数は裏画面に描画
 
-	//プレイヤーの最初の位置を、スタート位置にする=================
-	for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
-	{
-		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
-		{
-			//スタート位置を探す
-			if (mapData[tate][yoko] == s)
-			{
-				//スタート位置を計算
-				startPt.x = mapChip.width * yoko + mapChip.width / 2;	//中心X座標を取得
-				startPt.y = mapChip.height * tate + mapChip.height / 2;	//中心Y座標を取得
-				break;
-			}
-		}
-		//スタートが決まっていれば、ループ終了
-		if (startPt.x != -1 && startPt.y != -1) { break; }
-	}
-
-	//スタートが決まっていなければ
-	if (startPt.x == -1 && startPt.y == -1)
-	{
-		//エラーメッセージ表示
-		MessageBox(GetMainWindowHandle(), START_ERR_CAPTION, START_ERR_TITLE, MB_OK);	return -1;
-	}
-	//========================================================================
 
 	//無限ループ
 	while (TRUE)
@@ -769,19 +792,42 @@ VOID MY_START(VOID)
 //スタート画面の処理
 VOID MY_START_PROC(VOID)
 {
-	//エンターキーを押したら、プレイシーンへ移動する
+	if (MY_KEY_UP(KEY_INPUT_DOWN) == TRUE)//下のキーが押されたら
+	{
+		Now_coice = (Now_coice + 1) % Start_Num;//選択状態を一つ下げる
+	}
+	if (MY_KEY_UP(KEY_INPUT_UP) == TRUE)//上のキーが押されたら
+	{
+		Now_coice = (Now_coice + (Start_Num - 1)) % Start_Num;//選択状態を一つ上げる
+	}
+
+	//エンターキーを押したら、選択シーンへ移動する
 	if (MY_KEY_DOWN(KEY_INPUT_RETURN) == TRUE)
 	{
-		//BGMが流れているなら
-		if (CheckSoundMem(BGM_TITLE.handle) != 0)
-		{
-			StopSoundMem(BGM_TITLE.handle);	//BGMを止める
-		}
 
 		SetMouseDispFlag(TRUE);		//マウスカーソルを表示
 
+		switch (Now_coice)
+		{
+		case Start_Coice:
+			//BGMが流れているなら
+			if (CheckSoundMem(BGM_TITLE.handle) != 0)
+			{
+				StopSoundMem(BGM_TITLE.handle);	//BGMを止める
+			}
 
-		GameScene = GAME_SCENE_CHOICE;
+			GameScene = GAME_SCENE_CHOICE;//次の画面へ
+			break;
+		case Start_Exit:
+			//BGMが流れているなら
+			if (CheckSoundMem(BGM_TITLE.handle) != 0)
+			{
+				StopSoundMem(BGM_TITLE.handle);	//BGMを止める
+			}
+
+			break;
+		}
+		
 
 		return;
 	}
@@ -806,7 +852,23 @@ VOID MY_START_DRAW(VOID)
 	//背景を描画する
 	DrawGraph(ImageTitle.x, ImageTitle.y, ImageTitle.handle, TRUE);
 
-	DrawString(0, 0, "スタート画面(エンターキーを押して下さい)", GetColor(255, 255, 255));
+	DrawString(200, 150, "スタート画面", GetColor(255, 255, 255));
+	DrawString(200, 170, "上下キーを押して、エンターキーを押してください",GetColor(255, 255, 255));
+	DrawString(280, Play_y, "ゲーム開始", GetColor(255, 255, 255));
+	DrawString(280, Exit_y, "おわる",GetColor(255, 255, 255));
+
+
+	switch (Now_coice)
+	{
+	case Start_Coice:
+		S_coice_y = Play_y;
+		break;
+	case Start_Exit:
+		S_coice_y = Exit_y;
+		break;
+	}
+
+	DrawString(250, S_coice_y, "★", GetColor(255, 255, 255));
 	return;
 }
 
@@ -823,8 +885,27 @@ VOID MY_CHOICE(VOID)
 VOID MY_CHOICE_PROC(VOID)
 {
 
+
+	if (MY_KEY_UP(KEY_INPUT_S) ==TRUE)    //Sキーを押したら
+	{
+		C_1p_NOW_coice= (C_1p_NOW_coice + 1) % Coice_Num;//選択状態を一つ下げる
+	}
+	if (MY_KEY_UP(KEY_INPUT_W) ==TRUE)   //Wキーを押したら
+	{
+		C_1p_NOW_coice = (C_1p_NOW_coice + (Coice_Num - 1)) % Coice_Num;//選択状態を一つ上げる
+	}
+
+	if (MY_KEY_UP(KEY_INPUT_K) == TRUE)  //Iキーを押したら
+	{
+		C_2p_NOW_coice = (C_2p_NOW_coice + 1) % Coice_Num;//選択状態を一つ下げる
+	}
+	if (MY_KEY_UP(KEY_INPUT_I) == TRUE)  //Kキーを押したら
+	{
+		C_2p_NOW_coice = (C_2p_NOW_coice + (Coice_Num - 1)) % Coice_Num;//選択状態を一つ上げる
+	}
+
 	//Gを押したら、プレイシーンへ移動する
-	if (CheckHitKey(KEY_INPUT_G) != 0)
+	if (MY_KEY_DOWN(KEY_INPUT_G) != 0)
 	{
 		//BGMが流れているなら
 		if (CheckSoundMem(BGM_CHOICE.handle) != 0)
@@ -847,10 +928,6 @@ VOID MY_CHOICE_PROC(VOID)
 		PlaySoundMem(BGM_CHOICE.handle, DX_PLAYTYPE_LOOP);
 	}
 
-	//プレイヤーの当たる以前の位置を設定する--△
-	player.collBeforePt.x = player.CenterX;
-	player.collBeforePt.y = player.CenterY;
-	//-----------------------------------------△
 
 
 
@@ -862,6 +939,46 @@ VOID MY_CHOICE_DRAW(VOID)
 	//背景を描画する
 	DrawGraph(ImageChoice.x, ImageChoice.y, ImageChoice.handle, TRUE);
 
+	DrawString(300, Coice_ken_y, "剣キャラ", GetColor(255, 255, 255));
+	DrawString(300, Coice_kobu_y, "拳キャラ", GetColor(255, 255, 255));
+	DrawString(300, Coice_ken2_y, "剣キャラ２", GetColor(255, 255, 255));
+	DrawString(300, Coice_kobu2_y, "拳キャラ２", GetColor(255, 255, 255));
+
+	switch (C_1p_NOW_coice)
+	{
+	case Coice_ken:
+		C_1p_coice_y = Coice_ken_y;
+		break;
+	case Coice_kobu:
+		C_1p_coice_y =Coice_kobu_y;
+		break;
+	case Coice_ken2:
+		C_1p_coice_y = Coice_ken2_y;
+		break;
+	case Coice_kobu2:
+		C_1p_coice_y = Coice_kobu2_y;
+		break;
+	}
+
+	switch (C_2p_NOW_coice)
+	{
+	case Coice_ken:
+		C_2p_coice_y = Coice_ken_y;
+		break;
+	case Coice_kobu:
+		C_2p_coice_y = Coice_kobu_y;
+		break;
+	case Coice_ken2:
+		C_2p_coice_y = Coice_ken2_y;
+		break;
+	case Coice_kobu2:
+		C_2p_coice_y = Coice_kobu2_y;
+		break;
+	}
+
+
+	DrawString(70, C_1p_coice_y, "1p→", GetColor(0, 0, 0));
+	DrawString(400, C_2p_coice_y, "←2p", GetColor(0, 0, 0));
 	DrawString(0, 0, "選択画面(Gを押して下さい)", GetColor(255, 255, 255));
 	return;
 	return;
@@ -891,7 +1008,7 @@ VOID MY_PLAY_PROC(VOID)
 			StopSoundMem(BGM.handle);	//BGMを止める
 		}
 
-		SetMouseDispFlag(TRUE);		//マウスカーソルを表示
+		SetMouseDispFlag(FALSE);		//マウスカーソルを非表示
 
 
 		GameScene = GAME_SCENE_RUSULT;
@@ -943,95 +1060,94 @@ VOID MY_PLAY_PROC(VOID)
 		}
 	}
 	//---------------------------------△
+		//プレイヤーの当たる以前の位置を設定する--△
+	player2.collBeforePt.x = player2.CenterX;
+	player2.collBeforePt.y = player2.CenterY;
+	//-----------------------------------------△
 
-			//マウスの当たる前の位置から、現在位置の差がこの数値以内なら、動ける
-	int MoveValue = 100;
 
-	//マウスの移動量が少ないときに、移動させる
-	if (abs(player.collBeforePt.x - mouse.Point.x) < MoveValue
-		&& abs(player.collBeforePt.y - mouse.Point.y) < MoveValue)
-	{
-		//プレイヤーの中心位置を設定する
-		player.CenterX = mouse.Point.x;
-		player.CenterY = mouse.Point.y;
-	}
-	else
-	{
-		//プレイヤーの中心位置を設定する
-		player.CenterX = player.collBeforePt.x;
-		player.CenterY = player.collBeforePt.y;
-
-		//マウスの位置を設定する
-		SetMousePoint(player.collBeforePt.x, player.collBeforePt.y);
-	}
 	//-----------------------------△
 
 
 
 	//当たり判定-----------------------△
-	player.coll.left = player.CenterX - mapChip.width / 2 + 5;
-	player.coll.top = player.CenterY - mapChip.height / 2 + 5;
-	player.coll.right = player.CenterX + mapChip.width / 2 - 5;
-	player.coll.bottom = player.CenterY + mapChip.height / 2 - 5;
+	player2.coll.left = player2.CenterX - mapChip.width / 2 + 5;
+	player2.coll.top = player2.CenterY - mapChip.height / 2 + 5;
+	player2.coll.right = player2.CenterX + mapChip.width / 2 - 5;
+	player2.coll.bottom = player2.CenterY + mapChip.height / 2 - 5;
 
 	BOOL IsMove = TRUE;
 
-	//プレイヤーとマップがあたっていたら
-	if (MY_CHECK_MAP1_PLAYER_COLL(player.coll) == TRUE)
+
+	//---------------△△
+	if (AllKeyState[KEY_INPUT_RIGHT] >= 1) {
+		byougae = 3;
+		player2.CenterX++;
+		//RECT work = ;
+		if (MY_CHECK_MAP1_PLAYER_COLL(player2.coll) == TRUE)
+		{
+			IsMove = FALSE;
+
+
+		}
+
+	}
+	if (AllKeyState[KEY_INPUT_DOWN] >= 1) {
+		player2.CenterY++;
+	}
+	if (AllKeyState[KEY_INPUT_LEFT] >= 1) {
+		byougae = 9;
+		player2.CenterX--;
+	}
+	if (AllKeyState[KEY_INPUT_UP] >= 1) {
+		//yadd = -8.0f;
+	}
+	//y + yadd;
+	//yadd+=
+
+		//プレイヤーとマップがあたっていたら
+	if (MY_CHECK_MAP1_PLAYER_COLL(player2.coll) == TRUE)
 	{
-
-		/*[キー操作ここから]
-		player.CenterX = player.collBeforePt.x;
-		player.CenterY = player.collBeforePt.y;
-		*/
-
-		SetMousePoint(player.collBeforePt.x, player.collBeforePt.y);
-
 		IsMove = FALSE;
+
+
 	}
 
 	if (IsMove == TRUE)
 	{
-		//画面内にマウスがいれば
-		if (mouse.Point.x >= 0 && mouse.Point.x <= GAME_WIDTH
-			&& mouse.Point.y >= 0 && mouse.Point.y <= GAME_HEIGHT)
-		{
-			//プレイヤーの位置に置き換える
-			player.image.x = player.CenterX - player.image.width / 2;
-			player.image.y = player.CenterY - player.image.height / 2;
 
-			//あたっていないときの座標を取得
-			player.collBeforePt.x = player.CenterX;
-			player.collBeforePt.y = player.CenterY;
-		}
+		//プレイヤーの位置に置き換える
+		player2.image.x = player2.CenterX - player2.image.width / 2;
+		player2.image.y = player2.CenterY - player2.image.height / 2;
+
 
 	}
 
-	//---------------△△
+
 
 	//マウスの左ボタンをクリックしたとき
 	if (MY_MOUSE_DOWN(MOUSE_INPUT_LEFT) == TRUE)
 	{
 		//ショットが撃てるとき
-		if (player.CanShot == TRUE)
+		if (player2.CanShot == TRUE)
 		{
 			//ショット発射！！
-			PlaySoundMem(player.musicShot.handle, DX_PLAYTYPE_BACK);
-			player.CanShot = FALSE;
+			PlaySoundMem(player2.musicShot.handle, DX_PLAYTYPE_BACK);
+			player2.CanShot = FALSE;
 
 			//空いているスロットで、弾の描画をする
 			for (int cnt = 0; cnt < TAMA_MAX; cnt++)
 			{
-				if (player.tama[cnt].IsDraw == FALSE)
+				if (player2.tama[cnt].IsDraw == FALSE)
 				{
 					//弾のX位置はプレイヤーの中心から発射
-					player.tama[cnt].x = player.CenterX - player.tama[cnt].width / 2;
+					player2.tama[cnt].x = player2.CenterX - player2.tama[cnt].width / 2;
 
 					//弾のY位置はプレイヤーの上部分から発射
-					player.tama[cnt].y = player.image.y;
+					player2.tama[cnt].y = player2.image.y;
 
 					//弾を描画する
-					player.tama[cnt].IsDraw = TRUE;
+					player2.tama[cnt].IsDraw = TRUE;
 
 					break;
 				}
@@ -1042,16 +1158,16 @@ VOID MY_PLAY_PROC(VOID)
 	}
 
 	//ショットが撃てないとき
-	if (player.CanShot == FALSE)
+	if (player2.CanShot == FALSE)
 	{
 		//リロード時間が終わったとき
-		if (player.ShotReLoadCnt == player.ShotReLoadCntMAX)
+		if (player2.ShotReLoadCnt == player2.ShotReLoadCntMAX)
 		{
-			player.ShotReLoadCnt = 0;
-			player.CanShot = TRUE;		//再びショットできる
+			player2.ShotReLoadCnt = 0;
+			player2.CanShot = TRUE;		//再びショットできる
 		}
 
-		player.ShotReLoadCnt++;	//リロードする
+		player2.ShotReLoadCnt++;	//リロードする
 	}
 
 
@@ -1063,7 +1179,6 @@ VOID MY_PLAY_DRAW(VOID)
 {
 
 		
-	//while (ScreenFlip() == 0 && ProcessMessage() == 0 && ClearDrawScreen() == 0 && GetHitKeyStateAll(AllKeyState) == 0) {
 
 
 		//背景を描画する========================================================
@@ -1085,9 +1200,9 @@ VOID MY_PLAY_DRAW(VOID)
 		//====================================================================
 
 		//キャラクタの描画
-		//DrawGraph(x, yy, pp[result], TRUE);
 		//--------------------------------
-		DrawGraph(kx, ky, player2.image.handle, TRUE);
+		int xcount = 0, ycount = 0;
+		DrawGraph(player2.image.x, player2.image.y, kyara[byougae], TRUE);
 
 		//当たり判定の描画（デバッグ用）----------------△
 		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
@@ -1114,10 +1229,9 @@ VOID MY_PLAY_DRAW(VOID)
 				}
 			}
 		}
-		DrawGraph(player.image.x, player.image.y, player.image.handle, TRUE);
 
 		//当たり判定描画（デバッグ）----------------△
-		DrawBox(player.coll.left, player.coll.top, player.coll.right, player.coll.bottom, GetColor(255, 0, 0), FALSE);
+		//DrawBox(player2.coll.left, player2.coll.top, player2.coll.right, player2.coll.bottom, GetColor(255, 0, 0), FALSE);
 
 	    //-------------------------------------------------△
 
@@ -1132,43 +1246,43 @@ VOID MY_PLAY_DRAW(VOID)
 		for (int cnt = 0; cnt < TAMA_MAX; cnt++)
 		{
 			//描画できる弾の処理
-			if (player.tama[cnt].IsDraw == TRUE)
+			if (player2.tama[cnt].IsDraw == TRUE)
 			{
 				//弾を描画する
 				DrawGraph(
-					player.tama[cnt].x,
-					player.tama[cnt].y,
-					player.tama[cnt].handle[player.tama[cnt].nowImageKind],	//現在の画像の種類にあったハンドル
+					player2.tama[cnt].x,
+					player2.tama[cnt].y,
+					player2.tama[cnt].handle[player2.tama[cnt].nowImageKind],	//現在の画像の種類にあったハンドル
 					TRUE);
 
 				//弾の表示フレームを増やす
-				if (player.tama[cnt].changeImageCnt < player.tama[cnt].changeImageCntMAX)
+				if (player2.tama[cnt].changeImageCnt < player2.tama[cnt].changeImageCntMAX)
 				{
-					player.tama[cnt].changeImageCnt++;
+					player2.tama[cnt].changeImageCnt++;
 				}
 				else
 				{
 					//現在表示している弾の種類が、まだあるとき
-					if (player.tama[cnt].nowImageKind < TAMA_DIV_NUM - 1)	//-1しないと、最後の種類のときに++されてしまう
+					if (player2.tama[cnt].nowImageKind < TAMA_DIV_NUM - 1)	//-1しないと、最後の種類のときに++されてしまう
 					{
-						player.tama[cnt].nowImageKind++;	//弾を次の種類にする
+						player2.tama[cnt].nowImageKind++;	//弾を次の種類にする
 					}
 					else
 					{
-						player.tama[cnt].nowImageKind = 0;	//弾の種類をリセットする
+						player2.tama[cnt].nowImageKind = 0;	//弾の種類をリセットする
 					}
 
-					player.tama[cnt].changeImageCnt = 0;
+					player2.tama[cnt].changeImageCnt = 0;
 				}
 
 				//弾を上に移動させる
-				if (player.tama[cnt].y < 0)
+				if (player2.tama[cnt].y < 0)
 				{
-					player.tama[cnt].IsDraw = FALSE;	//描画終了
+					player2.tama[cnt].IsDraw = FALSE;	//描画終了
 				}
 				else
 				{
-					player.tama[cnt].y -= player.tama[cnt].speed;
+					player2.tama[cnt].y -= player2.tama[cnt].speed;
 				}
 			}
 		}
@@ -1198,7 +1312,7 @@ VOID MY_RUSULT_PROC(VOID)
 {
 
 	//Gを押したら、プレイシーンへ移動する
-	if (CheckHitKey(KEY_INPUT_K) != 0)
+	if (MY_KEY_DOWN(KEY_INPUT_K) != 0)
 	{
 
 		//BGMが流れているなら
@@ -1367,20 +1481,20 @@ BOOL MY_LOAD_IMAGE(VOID)
 
 
 	//プレイヤーの画像(カーソル）
-	strcpy_s(player.image.path, IMAGE_PLAYER_PATH);		//パスの設定
-	player.image.handle = LoadGraph(player.image.path);	//読み込み
-	if (player.image.handle == -1)
-	{
-		//エラーメッセージ表示
-		MessageBox(GetMainWindowHandle(), IMAGE_PLAYER_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
-		return FALSE;
-	}
-	GetGraphSize(player.image.handle, &player.image.width, &player.image.height);	//画像の幅と高さを取得
-	player.image.x = GAME_WIDTH / 2 - player.image.width / 2;		//左右中央揃え
-	player.image.y = GAME_HEIGHT / 2 - player.image.height / 2;		//上下中央揃え
-	player.CenterX = player.image.x + player.image.width / 2;		//画像の横の中心を探す
-	player.CenterY = player.image.y + player.image.height / 2;		//画像の縦の中心を探す
-	player.speed = CHARA_SPEED_LOW;									//スピードを設定
+	//strcpy_s(player.image.path, IMAGE_PLAYER_PATH);		//パスの設定
+	//player.image.handle = LoadGraph(player.image.path);	//読み込み
+	//if (player.image.handle == -1)
+	//{
+	//	エラーメッセージ表示
+	//	MessageBox(GetMainWindowHandle(), IMAGE_PLAYER_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
+	//	return FALSE;
+	//}
+	//GetGraphSize(player.image.handle, &player.image.width, &player.image.height);	//画像の幅と高さを取得
+	//player.image.x = GAME_WIDTH / 2 - player.image.width / 2;		//左右中央揃え
+	//player.image.y = GAME_HEIGHT / 2 - player.image.height / 2;		//上下中央揃え
+	//player.CenterX = player.image.x + player.image.width / 2;		//画像の横の中心を探す
+	//player.CenterY = player.image.y + player.image.height / 2;		//画像の縦の中心を探す
+	//player.speed = CHARA_SPEED_LOW;									//スピードを設定
 	//------------------------------------------------------------------
 	//---------キャラクタ△
 	strcpy_s(player2.image.path, IMAGE_PLAYER2_PATH);//パスの設定
@@ -1390,8 +1504,16 @@ BOOL MY_LOAD_IMAGE(VOID)
 		MessageBox(GetMainWindowHandle(), IMAGE_PLAYER2_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
 		return FALSE;
 	}
-	GetGraphSize(player2.image.handle, &player.image.width, &player.image.height);
+	LoadDivGraph(IMAGE_PLAYER2_PATH, 12, 3, 4, 49, 66, kyara);
+	player2.image.x = GAME_WIDTH / 2 - player2.image.width / 2;		//左右中央揃え
+	player2.image.y = GAME_HEIGHT / 2 - player2.image.height / 2;		//上下中央揃え
+	player2.CenterX = player2.image.x + player2.image.width / 2;		//画像の横の中心を探す
+	player2.CenterY = player2.image.y + player2.image.height / 2;		//画像の縦の中心を探す
+
+
 	//キャラクタ-----------------------------△
+
+	//LoadDivGraph(IMAGE_PLAYER2_PATH, 12, 3, 4, 49, 66, kyara);
 	//マップの画像を分割する--------------------------------------------------------------
 	int mapRes = LoadDivGraph(
 		GAME_MAP_PATH,										//赤弾のパス
@@ -1435,7 +1557,7 @@ BOOL MY_LOAD_IMAGE(VOID)
 		TAMA_RED_PATH,										//赤弾のパス
 		TAMA_DIV_NUM, TAMA_DIV_TATE, TAMA_DIV_YOKO,			//赤弾を分割する数
 		TAMA_DIV_WIDTH, TAMA_DIV_HEIGHT,					//画像を分割するの幅と高さ
-		&player.tama[0].handle[0]);							//分割した画像が入るハンドル
+		&player2.tama[0].handle[0]);							//分割した画像が入るハンドル
 
 	/*なぜか読み込める？？？*/
 
@@ -1447,46 +1569,46 @@ BOOL MY_LOAD_IMAGE(VOID)
 	}
 
 	//幅と高さを取得
-	GetGraphSize(player.tama[0].handle[0], &player.tama[0].width, &player.tama[0].height);
+	GetGraphSize(player2.tama[0].handle[0], &player2.tama[0].width, &player2.tama[0].height);
 
 	//弾の情報を生成
 	for (int cnt = 0; cnt < TAMA_MAX; cnt++)
 	{
 		//パスをコピー
-		strcpyDx(player.tama[cnt].path, TEXT(TAMA_RED_PATH));
+		strcpyDx(player2.tama[cnt].path, TEXT(TAMA_RED_PATH));
 
 		for (int i_num = 0; i_num < TAMA_DIV_NUM; i_num++)
 		{
 			//ハンドルをコピー
-			player.tama[cnt].handle[i_num] = player.tama[0].handle[i_num];
+			player2.tama[cnt].handle[i_num] = player2.tama[0].handle[i_num];
 		}
 
 		//幅をコピー
-		player.tama[cnt].width = player.tama[0].width;
+		player2.tama[cnt].width = player2.tama[0].width;
 
 		//高さをコピー
-		player.tama[cnt].height = player.tama[0].height;
+		player2.tama[cnt].height = player2.tama[0].height;
 
 		//弾のX位置はプレイヤーの中心から発射
-		player.tama[cnt].x = player.CenterX - player.tama[cnt].width / 2;
+		player2.tama[cnt].x = player2.CenterX - player2.tama[cnt].width / 2;
 
 		//弾のY位置はプレイヤーの上部分から発射
-		player.tama[cnt].y = player.image.y;
+		player2.tama[cnt].y = player2.image.y;
 
 		//弾は最初は非表示
-		player.tama[cnt].IsDraw = FALSE;
+		player2.tama[cnt].IsDraw = FALSE;
 
 		//弾の表示カウントを0にする
-		player.tama[cnt].changeImageCnt = 0;
+		player2.tama[cnt].changeImageCnt = 0;
 
 		//弾の表示カウントMAXを設定する
-		player.tama[cnt].changeImageCntMAX = TAMA_CHANGE_MAX;
+		player2.tama[cnt].changeImageCntMAX = TAMA_CHANGE_MAX;
 
 		//現在の画像の種類を初期化する
-		player.tama[cnt].nowImageKind = 0;
+		player2.tama[cnt].nowImageKind = 0;
 
 		//弾のスピードを設定する
-		player.tama[cnt].speed = CHARA_SPEED_LOW;
+		player2.tama[cnt].speed = CHARA_SPEED_LOW;
 	}
 
 	//------------------------------△
@@ -1537,17 +1659,16 @@ BOOL MY_LOAD_IMAGE(VOID)
 VOID MY_DELETE_IMAGE(VOID)
 {
 	DeleteGraph(ImageBack.handle);
-	DeleteGraph(player.image.handle);
+	DeleteGraph(player2.image.handle);
 	DeleteGraph(ImageTitle.handle);
 	DeleteGraph(ImageChoice.handle);
 	DeleteGraph(ImageRusult.handle);
 	DeleteGraph(ImageEnd.handle);
-	//DeleteGraph(player2.handle);
 
 	//マップ削除
 	for (int i_num = 0; i_num < MAP_DIV_NUM; i_num++) { DeleteGraph(mapChip.handle[i_num]); }
 	//-------------------
-	for (int i_num = 0; i_num < TAMA_DIV_NUM; i_num++) { DeleteGraph(player.tama[0].handle[i_num]); }
+	for (int i_num = 0; i_num < TAMA_DIV_NUM; i_num++) { DeleteGraph(player2.tama[0].handle[i_num]); }
 
 	return;
 }
@@ -1600,9 +1721,9 @@ BOOL MY_LOAD_MUSIC(VOID)
 	}
 
 	//プレイヤーのショット音
-	strcpy_s(player.musicShot.path, MUSIC_PLAYER_SHOT_PATH);			//パスの設定
-	player.musicShot.handle = LoadSoundMem(player.musicShot.path);		//読み込み
-	if (player.musicShot.handle == -1)
+	strcpy_s(player2.musicShot.path, MUSIC_PLAYER_SHOT_PATH);			//パスの設定
+	player2.musicShot.handle = LoadSoundMem(player2.musicShot.path);		//読み込み
+	if (player2.musicShot.handle == -1)
 	{
 		//エラーメッセージ表示
 		MessageBox(GetMainWindowHandle(), MUSIC_PLAYER_SHOT_PATH, MUSIC_LOAD_ERR_TITLE, MB_OK);
@@ -1616,7 +1737,7 @@ BOOL MY_LOAD_MUSIC(VOID)
 VOID MY_DELETE_MUSIC(VOID)
 {
 	DeleteSoundMem(BGM.handle);
-	DeleteSoundMem(player.musicShot.handle);
+	DeleteSoundMem(player2.musicShot.handle);
 	DeleteSoundMem(BGM_TITLE.handle);
 	DeleteSoundMem(BGM_CHOICE.handle);
 	DeleteSoundMem(BGM_PLAY.handle);
@@ -1629,7 +1750,7 @@ VOID MY_DELETE_MUSIC(VOID)
 
 
 //マップとプレイヤーの当たり判定をする関数--△
-BOOL MY_CHECK_MAP1_PLAYER_COLL(RECT player)
+BOOL MY_CHECK_MAP1_PLAYER_COLL(RECT player2)
 {
 	//マップの当たり判定を設定する
 	for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
@@ -1637,14 +1758,12 @@ BOOL MY_CHECK_MAP1_PLAYER_COLL(RECT player)
 		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
 		{
 			//プレイヤーとマップが当たっているとき
-			if (MY_CHECK_RECT_COLL(player, mapColl[tate][yoko]) == TRUE)
+			if (MY_CHECK_RECT_COLL(player2, mapColl[tate][yoko]) == TRUE)
 			{
 				//壁のときは、プレイヤーとマップが当たっている
 				if (map[tate][yoko].kind == k) { return TRUE; }
 				if (map[tate][yoko].kind == y) { return TRUE; }
-				{
 
-				}
 			}
 		}
 	}
