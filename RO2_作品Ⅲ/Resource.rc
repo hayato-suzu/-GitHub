@@ -1,6 +1,6 @@
-#include "resource.h"
+//#include  "resource.h"
 
-IDI_ICON1 ICON1 "neko.ico"
+1001 ICON "neko_icon.ico"
 
 
 IDC_CURSOR1 CURSOR  "CrossLight-HD01-Aim_Red.cur"

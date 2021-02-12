@@ -5,7 +5,6 @@
 
 //########## ヘッダーファイル読み込み ##########
 #include "DxLib.h"
-#include "resource.h"
 
 //########## マクロ定義 ##########
 #define GAME_WIDTH			800	//画面の横の大きさ
@@ -49,6 +48,8 @@
 #define IMAGE_TITLE_OWARI_PATH  TEXT(".\\IMAGE\\title_owari.png")//"おわり"の画像
 #define IMAGE_CHOICE_KEN1_PATH  TEXT(".\\IMAGE\\choice_ken.png")//選択の剣キャラ1の画像
 #define IMAGE_CHOICE_KEN2_PATH  TEXT(".\\IMAGE\\choice_ken2.png")//選択の剣キャラ２の画像
+#define IMAGE_CHOICE_KOBU1_PATH TEXT(".\\IMAGE\\choice_kobu1.png")//選択の拳キャラ１の画像
+//#define IMAGE_CHOICE_KOBU2_PATH TEXT
 
 
 
@@ -296,15 +297,20 @@ IMAGE ImagePlay;    //プレイ画面の背景
 IMAGE ImageRusult;  //リザルト背景
 IMAGE ImageEnd;     //エンド背景
 //------------------------2.4
+IMAGE ImageTitleROGO;
 PLAYER player1;      //キャラ１の構造体
 PLAYER player2;		 //キャラ２の構造体
 PLAYER player3;      //キャラ３の構造体
 PLAYER player4;      //キャラ４の構造体
+PLAYER CHOICE_PLAYER1;//プレイヤー１が選んでいる構造体
+PLAYER CHOICE_PLAYER2;//プレイヤー２が選んでいる構造体
 #define GAME_GR     4  //ゲームの重力
 #define PLAYER1_CHARA_X 0//プレイヤ1のx初期位置
 #define PLAYER1_CHARA_Y 0//プレイヤ1のy初期位置
+#define PLAYER2_CHARA_X 0//プレイヤ２のx初期位置
+#define PLAYER2_CHARA_Y 0//プレイヤ２のy初期位置
 BOOL IsMAP_JUMP(VOID);//地面の当たり判定
-
+//-------------------------------------------------
 //=============================================================================
 
 
@@ -329,7 +335,7 @@ GAME_MAP_KIND mapData[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX]{
 		t,t,t,t,t,t,t,t,t,t,t,t,t,	// 3
 		t,t,t,t,t,t,t,t,t,t,t,t,t,	// 4
 		t,t,t,t,t,t,t,t,t,t,t,t,t,	// 5
-		t,t,s,t,t,t,t,t,t,t,t,t,t,	// 6
+		t,t,t,t,t,t,t,t,t,t,t,t,t,	// 6
 		y,y,y,y,y,y,y,y,y,y,y,y,y,	// 7
 		k,k,k,k,k,k,k,k,k,k,k,k,k,	// 8
 		k,k,k,k,k,k,k,k,k,k,k,k,k,  // 9
@@ -428,11 +434,14 @@ const static int Coice_kobu_y = 200;   //拳キャラ１のｙの位置
 const static int Coice_ken2_y = 300;   //剣キャラ２のｙの位置
 const static int Coice_kobu2_y = 400;  //拳キャラ２のｙの位置
 
-typedef enum {   //選択画面選択枠
-	Coice_ken,   //剣キャラ１
-	Coice_kobu,  //拳キャラ１
-	Coice_ken2,  //剣キャラ２
-	Coice_kobu2, //拳キャラ２
+int Player1_check = 0;
+int Player2_check = 0;
+
+typedef enum {	//選択画面選択枠
+	Coice_ken,	//剣キャラ１
+	Coice_kobu,	//拳キャラ１
+	Coice_ken2,	//剣キャラ２
+	Coice_kobu2,//拳キャラ２
 
 	Coice_Num,  //項目合計
 };
@@ -445,16 +454,16 @@ static int C_2p_NOW_coice = Coice_ken;    //初期化
 
 //------------------------------1.29
 //リザルト画面の文字の位置
-const static int Rusult_Play_x = 100;//「もう一度」のxの位置
-const static int Rusult_Coice_x = 200;//「選択から選ぶ」のxの位置
-const static int Rusult_End_x = 300;//「エンド画面」のxの位置
+const static int Rusult_Play_x = 100;	//「もう一度」のxの位置
+const static int Rusult_Coice_x = 200;	//「選択から選ぶ」のxの位置
+const static int Rusult_End_x = 300;	//「エンド画面」のxの位置
 
-typedef enum {//リザルト画面選択枠
-	Rusult_Play,//前の画面に戻る
-	Rusult_Coice,//選択画面に戻る
-	Rusult_End,//次の画面へ
+typedef enum {		//リザルト画面選択枠
+	Rusult_Play,	//前の画面に戻る
+	Rusult_Coice,	//選択画面に戻る
+	Rusult_End,		//次の画面へ
 
-	Rusult_Num,//項目の数
+	Rusult_Num,		//項目の数
 };
 
 int R_coice_x = 0;//選択中のｘの位置
@@ -470,7 +479,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	SetWindowStyleMode(GAME_WINDOW_BAR);				//タイトルバーはデフォルトにする
 	SetMainWindowText(TEXT(GAME_WINDOW_NAME));			//ウィンドウのタイトルの文字
 	SetAlwaysRunFlag(TRUE);								//非アクティブでも実行する
-	SetWindowIconID(IDI_ICON1);							//アイコンファイルを読込
+	SetWindowIconID(1001);							//アイコンファイルを読込
 
 	if (DxLib_Init() == -1) { return -1; }	//ＤＸライブラリ初期化処理
 
@@ -723,6 +732,7 @@ BOOL MY_MOUSE_DOWN(int MOUSE_INPUT_)
 	}
 }
 
+
 //ボタンを押し上げたか、マウスコード判断する
 //引　数：int：マウスコード：MOUSE_INPUT_???
 BOOL MY_MOUSE_UP(int MOUSE_INPUT_)
@@ -841,8 +851,6 @@ VOID MY_START_PROC(VOID)
 	//エンターキーを押したら、選択シーンへ移動する
 	if (MY_KEY_DOWN(KEY_INPUT_RETURN) == TRUE)
 	{
-
-
 		switch (Now_coice)
 		{
 		case Start_Coice:
@@ -860,15 +868,12 @@ VOID MY_START_PROC(VOID)
 			{
 				StopSoundMem(BGM_TITLE.handle);	//BGMを止める
 			}
-			DxLib_End();	//ＤＸライブラリ使用の終了処理
+			DxLib_End();//ＤＸライブラリ使用の終了処理
 
 			break;
 		}
-		
-
 		return;
 	}
-
 	//BGMが流れていないなら
 	if (CheckSoundMem(BGM_TITLE.handle) == 0)
 	{
@@ -922,51 +927,70 @@ VOID MY_CHOICE(VOID)
 VOID MY_CHOICE_PROC(VOID)
 {
 
-
-	if (MY_KEY_UP(KEY_INPUT_S) ==TRUE)    //Sキーを押したら
+	if (Player1_check == 0)
 	{
-		C_1p_NOW_coice= (C_1p_NOW_coice + 1) % Coice_Num;//選択状態を一つ下げる
-	}
-	if (MY_KEY_UP(KEY_INPUT_W) ==TRUE)   //Wキーを押したら
-	{
-		C_1p_NOW_coice = (C_1p_NOW_coice + (Coice_Num - 1)) % Coice_Num;//選択状態を一つ上げる
-	}
-
-	if (MY_KEY_UP(KEY_INPUT_K) == TRUE)  //Iキーを押したら
-	{
-		C_2p_NOW_coice = (C_2p_NOW_coice + 1) % Coice_Num;//選択状態を一つ下げる
-	}
-	if (MY_KEY_UP(KEY_INPUT_I) == TRUE)  //Kキーを押したら
-	{
-		C_2p_NOW_coice = (C_2p_NOW_coice + (Coice_Num - 1)) % Coice_Num;//選択状態を一つ上げる
-	}
-
-	//Gを押したら、プレイシーンへ移動する
-	if (MY_KEY_DOWN(KEY_INPUT_G) != 0)
-	{
-		//BGMが流れているなら
-		if (CheckSoundMem(BGM_CHOICE.handle) != 0)
+		if (MY_KEY_UP(KEY_INPUT_S) == TRUE)    //Sキーを押したら
 		{
-			StopSoundMem(BGM_CHOICE.handle);	//BGMを止める
+			C_1p_NOW_coice = (C_1p_NOW_coice + 1) % Coice_Num;//選択状態を一つ下げる
+		}
+		if (MY_KEY_UP(KEY_INPUT_W) == TRUE)   //Wキーを押したら
+		{
+			C_1p_NOW_coice = (C_1p_NOW_coice + (Coice_Num - 1)) % Coice_Num;//選択状態を一つ上げる
+		}
+	}
+	if (Player2_check == 0)
+	{
+		if (MY_KEY_UP(KEY_INPUT_K) == TRUE)  //Iキーを押したら
+		{
+			C_2p_NOW_coice = (C_2p_NOW_coice + 1) % Coice_Num;//選択状態を一つ下げる
+		}
+		if (MY_KEY_UP(KEY_INPUT_I) == TRUE)  //Kキーを押したら
+		{
+			C_2p_NOW_coice = (C_2p_NOW_coice + (Coice_Num - 1)) % Coice_Num;//選択状態を一つ上げる
+		}
+	}
+
+
+	//Dを押したら、1プレイヤー決定
+	if (MY_KEY_UP(KEY_INPUT_D) == TRUE)
+	{
+		Player1_check = 1;
+	}
+
+	//Lを押したら、2プレイヤー決定
+	if (MY_KEY_UP(KEY_INPUT_L) == TRUE)
+	{
+		Player2_check = 1;
+	}
+
+	if (Player1_check == 1 && Player2_check == 1)
+	{
+		//エンターキーを押したら
+		if (MY_KEY_DOWN(KEY_INPUT_RETURN) == TRUE)
+		{
+			//BGMが流れているなら
+			if (CheckSoundMem(BGM_CHOICE.handle) != 0)
+			{
+				StopSoundMem(BGM_CHOICE.handle);	//BGMを止める
+			}
+			player1.X = PLAYER1_CHARA_X;
+			player1.Y = PLAYER1_CHARA_Y;
+
+
+			GameScene = GAME_SCENE_PLAY;
+			return;
 		}
 
+		//BGMが流れていないなら
+		if (CheckSoundMem(BGM_CHOICE.handle) == 0)
+		{
+			//BGMの音量を下げる
+			ChangeVolumeSoundMem(255 * 50 / 100, BGM_CHOICE.handle);	//50%の音量にする
 
-		GameScene = GAME_SCENE_PLAY;
-		return;
+			PlaySoundMem(BGM_CHOICE.handle, DX_PLAYTYPE_LOOP);
+		}
 	}
 
-	//BGMが流れていないなら
-	if (CheckSoundMem(BGM_CHOICE.handle) == 0)
-	{
-		//BGMの音量を下げる
-		ChangeVolumeSoundMem(255 * 50 / 100, BGM_CHOICE.handle);	//50%の音量にする
-
-		PlaySoundMem(BGM_CHOICE.handle, DX_PLAYTYPE_LOOP);
-	}
-
-
-	player1.X = PLAYER1_CHARA_X;
-	player1.Y = PLAYER1_CHARA_Y;
 
 	return;
 }
@@ -976,24 +1000,41 @@ VOID MY_CHOICE_DRAW(VOID)
 	//背景を描画する
 	DrawGraph(ImageChoice.x, ImageChoice.y, ImageChoice.handle, TRUE);
 
-	DrawString(300, Coice_ken_y, "剣キャラ", GetColor(255, 255, 255));
-	DrawString(300, Coice_kobu_y, "拳キャラ", GetColor(255, 255, 255));
-	DrawString(300, Coice_ken2_y, "剣キャラ２", GetColor(255, 255, 255));
-	DrawString(300, Coice_kobu2_y, "拳キャラ２", GetColor(255, 255, 255));
+	DrawString(300, Coice_ken_y, "キャラ1", GetColor(255, 255, 255));
+	DrawString(300, Coice_kobu_y, "キャラ2", GetColor(255, 255, 255));
+	DrawString(300, Coice_ken2_y, "キャラ3", GetColor(255, 255, 255));
+	DrawString(300, Coice_kobu2_y, "キャラ4", GetColor(255, 255, 255));
 
 	switch (C_1p_NOW_coice)
 	{
 	case Coice_ken:
 		C_1p_coice_y = Coice_ken_y;
+		if (Player1_check == 1)
+		{
+			CHOICE_PLAYER1 = player1;
+		}
 		break;
 	case Coice_kobu:
 		C_1p_coice_y =Coice_kobu_y;
+		if (Player1_check == 1)
+		{
+			CHOICE_PLAYER1 = player2;
+		}
 		break;
 	case Coice_ken2:
 		C_1p_coice_y = Coice_ken2_y;
+		if (Player1_check == 1)
+		{
+			CHOICE_PLAYER1 = player3;
+		}
 		break;
 	case Coice_kobu2:
 		C_1p_coice_y = Coice_kobu2_y;
+		if (Player1_check == 1)
+		{
+			CHOICE_PLAYER1 = player4;
+		}
+
 		break;
 	}
 
@@ -1001,22 +1042,38 @@ VOID MY_CHOICE_DRAW(VOID)
 	{
 	case Coice_ken:
 		C_2p_coice_y = Coice_ken_y;
+		if (Player2_check == 1)
+		{
+			CHOICE_PLAYER2 = player1;
+		}
 		break;
 	case Coice_kobu:
 		C_2p_coice_y = Coice_kobu_y;
+		if (Player2_check == 1)
+		{
+			CHOICE_PLAYER2 = player2;
+		}
 		break;
 	case Coice_ken2:
 		C_2p_coice_y = Coice_ken2_y;
+		if (Player2_check == 1)
+		{
+			CHOICE_PLAYER2 = player3;
+		}
 		break;
 	case Coice_kobu2:
 		C_2p_coice_y = Coice_kobu2_y;
+		if (Player2_check == 1)
+		{
+			CHOICE_PLAYER2 = player4;
+		}
 		break;
 	}
 
 
 	DrawString(70, C_1p_coice_y, "1p→", GetColor(0, 0, 0));
 	DrawString(400, C_2p_coice_y, "←2p", GetColor(0, 0, 0));
-	DrawString(0, 0, "選択画面(Gを押して下さい)", GetColor(255, 255, 255));
+	DrawString(0, 0, "選択画面(エンターキーを押して下さい)", GetColor(255, 255, 255));
 
 	return;
 }
@@ -1077,7 +1134,7 @@ VOID MY_PLAY_PROC(VOID)
 	player1.coll.top = player1.Y;
 	player1.coll.bottom = player1.Y + player1.height;
 
-	IsMAP_JUMP();//地面の判定
+	
 
 	//ジャンプ　Wを押したとき
 	if (MY_KEY_DOWN(KEY_INPUT_W) == TRUE)
@@ -1106,11 +1163,9 @@ VOID MY_PLAY_PROC(VOID)
 		{
 			player1.IsJump = FALSE;
 		}
-		
-
 	}
 
-
+	IsMAP_JUMP();//地面の判定
 
 	//Aで左を向く
 	if (MY_KEY_DOWN(KEY_INPUT_A) == TRUE)
@@ -1326,7 +1381,9 @@ VOID MY_RUSULT_DRAW(VOID)
 	//背景を描画する
 	DrawGraph(ImageRusult.x, ImageRusult.y, ImageRusult.handle, TRUE);
 
-	DrawString(150,400,"もう一度",GetColor(255,255,255));
+	DrawString(100,500,"もう一度",GetColor(255,255,255));
+	DrawString(200,500,"選択画面からやり直す",GetColor(255,255,255));
+	DrawString(400,500,"終わる",GetColor(255,255,255));
 
 	DrawString(0, 0, "リザルト画面(Kを押して下さい)", GetColor(255, 255, 255));
 
