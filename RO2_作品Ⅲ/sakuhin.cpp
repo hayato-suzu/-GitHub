@@ -12,7 +12,7 @@
 #define GAME_COLOR			32	//画面のカラービット
 
 #define GAME_WINDOW_BAR		0	//タイトルバーはデフォルトにする
-#define GAME_WINDOW_NAME	"実力比べ"	//ウィンドウのタイトル
+#define GAME_WINDOW_NAME	"ジツリョク　クラベ"	//ウィンドウのタイトル
 
 #define GAME_FPS			60	//FPSの数値	
 
@@ -307,9 +307,10 @@ PLAYER CHOICE_PLAYER2;//プレイヤー２が選んでいる構造体
 #define GAME_GR     4  //ゲームの重力
 #define PLAYER1_CHARA_X 0//プレイヤ1のx初期位置
 #define PLAYER1_CHARA_Y 0//プレイヤ1のy初期位置
-#define PLAYER2_CHARA_X 0//プレイヤ２のx初期位置
+#define PLAYER2_CHARA_X 750//プレイヤ２のx初期位置
 #define PLAYER2_CHARA_Y 0//プレイヤ２のy初期位置
-BOOL IsMAP_JUMP(VOID);//地面の当たり判定
+BOOL IsMAP_JUMP(VOID);//地面の当たり判定キャラ１
+BOOL IsMAP_JUMP2(VOID);//地面の当たり判定キャラ２
 //-------------------------------------------------
 //=============================================================================
 
@@ -434,8 +435,8 @@ const static int Coice_kobu_y = 200;   //拳キャラ１のｙの位置
 const static int Coice_ken2_y = 300;   //剣キャラ２のｙの位置
 const static int Coice_kobu2_y = 400;  //拳キャラ２のｙの位置
 
-int Player1_check = 0;
-int Player2_check = 0;
+int Player1_check = 0;//決定
+int Player2_check = 0;//決定
 
 typedef enum {	//選択画面選択枠
 	Coice_ken,	//剣キャラ１
@@ -449,14 +450,14 @@ typedef enum {	//選択画面選択枠
 int C_1p_coice_y = 0;               //１プレイヤの選択ｙの位置
 int C_2p_coice_y = 0;               //２プレイヤの選択ｙの位置
 
-static int C_1p_NOW_coice = Coice_ken;    //初期化
-static int C_2p_NOW_coice = Coice_ken;    //初期化
+static int C_1p_NOW_coice = Coice_ken;    //はじめは一番上
+static int C_2p_NOW_coice = Coice_ken;    //はじめは一番上
 
 //------------------------------1.29
 //リザルト画面の文字の位置
-const static int Rusult_Play_x = 100;	//「もう一度」のxの位置
-const static int Rusult_Coice_x = 200;	//「選択から選ぶ」のxの位置
-const static int Rusult_End_x = 300;	//「エンド画面」のxの位置
+const static int Rusult_Play_x = 130;	//「もう一度」のxの位置
+const static int Rusult_Coice_x = 230;	//「選択から選ぶ」のxの位置
+const static int Rusult_End_x = 330;	//「エンド画面」のxの位置
 
 typedef enum {		//リザルト画面選択枠
 	Rusult_Play,	//前の画面に戻る
@@ -468,7 +469,7 @@ typedef enum {		//リザルト画面選択枠
 
 int R_coice_x = 0;//選択中のｘの位置
 
-static int R_NOW_coice = Rusult_Play;//初期化
+static int R_NOW_coice = Rusult_Play;//はじめは一番上
 
 //----------------------------------------------------------
 //########## プログラムで最初に実行される関数 ##########
@@ -973,14 +974,15 @@ VOID MY_CHOICE_PROC(VOID)
 			{
 				StopSoundMem(BGM_CHOICE.handle);	//BGMを止める
 			}
-			player1.X = PLAYER1_CHARA_X;
-			player1.Y = PLAYER1_CHARA_Y;
-
+			CHOICE_PLAYER1.X = PLAYER1_CHARA_X;
+			CHOICE_PLAYER1.Y = PLAYER1_CHARA_Y;
+			CHOICE_PLAYER2.X = PLAYER2_CHARA_X;
+			CHOICE_PLAYER2.Y = PLAYER2_CHARA_Y;
 
 			GameScene = GAME_SCENE_PLAY;
 			return;
 		}
-
+	}
 		//BGMが流れていないなら
 		if (CheckSoundMem(BGM_CHOICE.handle) == 0)
 		{
@@ -989,9 +991,7 @@ VOID MY_CHOICE_PROC(VOID)
 
 			PlaySoundMem(BGM_CHOICE.handle, DX_PLAYTYPE_LOOP);
 		}
-	}
-
-
+	
 	return;
 }
 //選択画面の描画
@@ -1000,10 +1000,10 @@ VOID MY_CHOICE_DRAW(VOID)
 	//背景を描画する
 	DrawGraph(ImageChoice.x, ImageChoice.y, ImageChoice.handle, TRUE);
 
-	DrawString(300, Coice_ken_y, "キャラ1", GetColor(255, 255, 255));
-	DrawString(300, Coice_kobu_y, "キャラ2", GetColor(255, 255, 255));
-	DrawString(300, Coice_ken2_y, "キャラ3", GetColor(255, 255, 255));
-	DrawString(300, Coice_kobu2_y, "キャラ4", GetColor(255, 255, 255));
+	DrawString(300, Coice_ken_y, "キャラ1", GetColor(255, 0, 255));
+	DrawString(300, Coice_kobu_y, "キャラ2", GetColor(255, 0, 255));
+	DrawString(300, Coice_ken2_y, "キャラ3", GetColor(255, 0, 255));
+	DrawString(300, Coice_kobu2_y, "キャラ4", GetColor(255, 0, 255));
 
 	switch (C_1p_NOW_coice)
 	{
@@ -1012,6 +1012,9 @@ VOID MY_CHOICE_DRAW(VOID)
 		if (Player1_check == 1)
 		{
 			CHOICE_PLAYER1 = player1;
+			CHOICE_PLAYER1.X = PLAYER1_CHARA_X;
+			CHOICE_PLAYER1.Y = PLAYER1_CHARA_Y;
+
 		}
 		break;
 	case Coice_kobu:
@@ -1019,6 +1022,9 @@ VOID MY_CHOICE_DRAW(VOID)
 		if (Player1_check == 1)
 		{
 			CHOICE_PLAYER1 = player2;
+			CHOICE_PLAYER1.X = PLAYER1_CHARA_X;
+			CHOICE_PLAYER1.Y = PLAYER1_CHARA_Y;
+
 		}
 		break;
 	case Coice_ken2:
@@ -1026,6 +1032,9 @@ VOID MY_CHOICE_DRAW(VOID)
 		if (Player1_check == 1)
 		{
 			CHOICE_PLAYER1 = player3;
+			CHOICE_PLAYER1.X = PLAYER1_CHARA_X;
+			CHOICE_PLAYER1.Y = PLAYER1_CHARA_Y;
+
 		}
 		break;
 	case Coice_kobu2:
@@ -1033,6 +1042,9 @@ VOID MY_CHOICE_DRAW(VOID)
 		if (Player1_check == 1)
 		{
 			CHOICE_PLAYER1 = player4;
+			CHOICE_PLAYER1.X = PLAYER1_CHARA_X;
+			CHOICE_PLAYER1.Y = PLAYER1_CHARA_Y;
+
 		}
 
 		break;
@@ -1045,6 +1057,9 @@ VOID MY_CHOICE_DRAW(VOID)
 		if (Player2_check == 1)
 		{
 			CHOICE_PLAYER2 = player1;
+			CHOICE_PLAYER2.X = PLAYER2_CHARA_X;
+			CHOICE_PLAYER2.Y = PLAYER2_CHARA_Y;
+			CHOICE_PLAYER2.imagekind = 3;
 		}
 		break;
 	case Coice_kobu:
@@ -1052,6 +1067,9 @@ VOID MY_CHOICE_DRAW(VOID)
 		if (Player2_check == 1)
 		{
 			CHOICE_PLAYER2 = player2;
+			CHOICE_PLAYER2.X = PLAYER2_CHARA_X;
+			CHOICE_PLAYER2.Y = PLAYER2_CHARA_Y;
+			CHOICE_PLAYER2.imagekind = 3;
 		}
 		break;
 	case Coice_ken2:
@@ -1059,6 +1077,9 @@ VOID MY_CHOICE_DRAW(VOID)
 		if (Player2_check == 1)
 		{
 			CHOICE_PLAYER2 = player3;
+			CHOICE_PLAYER2.X = PLAYER2_CHARA_X;
+			CHOICE_PLAYER2.Y = PLAYER2_CHARA_Y;
+			CHOICE_PLAYER2.imagekind = 3;
 		}
 		break;
 	case Coice_kobu2:
@@ -1066,6 +1087,9 @@ VOID MY_CHOICE_DRAW(VOID)
 		if (Player2_check == 1)
 		{
 			CHOICE_PLAYER2 = player4;
+			CHOICE_PLAYER2.X = PLAYER2_CHARA_X;
+			CHOICE_PLAYER2.Y = PLAYER2_CHARA_Y;
+			CHOICE_PLAYER2.imagekind = 3;
 		}
 		break;
 	}
@@ -1073,7 +1097,9 @@ VOID MY_CHOICE_DRAW(VOID)
 
 	DrawString(70, C_1p_coice_y, "1p→", GetColor(0, 0, 0));
 	DrawString(400, C_2p_coice_y, "←2p", GetColor(0, 0, 0));
-	DrawString(0, 0, "選択画面(エンターキーを押して下さい)", GetColor(255, 255, 255));
+	DrawString(0, 0, "1PはWで上へ、Sで下を選択、Dで確定", GetColor(0, 0, 0));
+	DrawString(0, 20, "2PはIで上へ、Kで下を選択、Lで確定", GetColor(0, 0,0));
+	DrawString(0, 40, "両方確定したらエンターキーを押してください", GetColor(0, 0, 0));
 
 	return;
 }
@@ -1125,14 +1151,21 @@ VOID MY_PLAY_PROC(VOID)
 	}
 
 
-	//重力を強制的に発生
-	player1.Y += GAME_GR;
+	//重力を強制的に発生キャラ1
+	CHOICE_PLAYER1.Y += GAME_GR;
+	//重力を強制的に発生キャラ２
+	CHOICE_PLAYER2.Y += GAME_GR;
 
-	//当たり判定を更新
-	player1.coll.left = player1.X;
-	player1.coll.right = player1.X + player1.width;
-	player1.coll.top = player1.Y;
-	player1.coll.bottom = player1.Y + player1.height;
+	//当たり判定を更新キャラ１
+	CHOICE_PLAYER1.coll.left = CHOICE_PLAYER1.X;
+	CHOICE_PLAYER1.coll.right = CHOICE_PLAYER1.X + CHOICE_PLAYER1.width;
+	CHOICE_PLAYER1.coll.top = CHOICE_PLAYER1.Y;
+	CHOICE_PLAYER1.coll.bottom = CHOICE_PLAYER1.Y + CHOICE_PLAYER1.height;
+	//当たり判定を更新キャラ２
+	CHOICE_PLAYER2.coll.left = CHOICE_PLAYER2.X;
+	CHOICE_PLAYER2.coll.right = CHOICE_PLAYER2.X + CHOICE_PLAYER2.width;
+	CHOICE_PLAYER2.coll.top = CHOICE_PLAYER2.Y;
+	CHOICE_PLAYER2.coll.bottom = CHOICE_PLAYER2.Y + CHOICE_PLAYER2.height;
 
 	
 
@@ -1140,88 +1173,173 @@ VOID MY_PLAY_PROC(VOID)
 	if (MY_KEY_DOWN(KEY_INPUT_W) == TRUE)
 	{
 		//ジャンプしていないときは、ジャンプの　フラグをたてる
-		if (player1.IsJump == FALSE)
+		if (CHOICE_PLAYER1.IsJump == FALSE)
 		{
-			player1.IsJump = TRUE;
+			CHOICE_PLAYER1.IsJump = TRUE;
 
-			player1.BeforeJump = player1.Y;   //ジャンプする前のY位置
-			player1.JumpPower = -10;		  //初速度を10で引く
+			CHOICE_PLAYER1.BeforeJump = CHOICE_PLAYER1.Y;   //ジャンプする前のY位置
+			CHOICE_PLAYER1.JumpPower = -10;		  //初速度を10で引く
+		}
+	}
+	//ジャンプ　Iを押したとき
+	if (MY_KEY_DOWN(KEY_INPUT_I) == TRUE)
+	{
+		//ジャンプしていないときは、ジャンプの　フラグをたてる
+		if (CHOICE_PLAYER2.IsJump == FALSE)
+		{
+			CHOICE_PLAYER2.IsJump = TRUE;
+
+			CHOICE_PLAYER2.BeforeJump = CHOICE_PLAYER2.Y;   //ジャンプする前のY位置
+			CHOICE_PLAYER2.JumpPower = -10;		  //初速度を10で引く
 		}
 	}
 
-	//ジャンプしているとき
-	if (player1.IsJump == TRUE)
+
+	//ジャンプしているときキャラ１
+	if (CHOICE_PLAYER1.IsJump == TRUE)
 	{
-		player1.Y -= GAME_GR;                                               //重力に負けない
-		int y_temp = player1.Y;												//現在のY座標を記録
-		player1.Y += (player1.Y - player1.BeforeJump) + player1.JumpPower;  //上に向かう数値を計算させる
-		player1.JumpPower = 1;                                              //初速度を１にする
-		player1.BeforeJump = y_temp;                                        //以前の位置に記録
+		CHOICE_PLAYER1.Y -= GAME_GR;                                               //重力に負けない
+		int y_temp = CHOICE_PLAYER1.Y;												//現在のY座標を記録
+		CHOICE_PLAYER1.Y += (CHOICE_PLAYER1.Y - CHOICE_PLAYER1.BeforeJump) + CHOICE_PLAYER1.JumpPower;  //上に向かう数値を計算させる
+		CHOICE_PLAYER1.JumpPower = 1;                                              //初速度を１にする
+		CHOICE_PLAYER1.BeforeJump = y_temp;                                        //以前の位置に記録
 
 		//地面の当たり判定(当たっていないとき）
 		if (IsMAP_JUMP()==TRUE)
 		{
-			player1.IsJump = FALSE;
+			CHOICE_PLAYER1.IsJump = FALSE;
+		}
+	}
+	//ジャンプしているときキャラ２
+	if (CHOICE_PLAYER2.IsJump == TRUE)
+	{
+		CHOICE_PLAYER2.Y -= GAME_GR;                                               //重力に負けない
+		int y_temp = CHOICE_PLAYER2.Y;												//現在のY座標を記録
+		CHOICE_PLAYER2.Y += (CHOICE_PLAYER2.Y - CHOICE_PLAYER2.BeforeJump) + CHOICE_PLAYER2.JumpPower;  //上に向かう数値を計算させる
+		CHOICE_PLAYER2.JumpPower = 1;                                              //初速度を１にする
+		CHOICE_PLAYER2.BeforeJump = y_temp;                                        //以前の位置に記録
+
+		//地面の当たり判定(当たっていないとき）
+		if (IsMAP_JUMP2() == TRUE)
+		{
+			CHOICE_PLAYER2.IsJump = FALSE;
 		}
 	}
 
-	IsMAP_JUMP();//地面の判定
+
+	IsMAP_JUMP();//地面の判定キャラ１
+	IsMAP_JUMP2();//地面の判定キャラ２
 
 	//Aで左を向く
 	if (MY_KEY_DOWN(KEY_INPUT_A) == TRUE)
 	{
-		if (player1.imageChangeCnt == player1.imageChangeCntMAX)
+		if (CHOICE_PLAYER1.imageChangeCnt == CHOICE_PLAYER1.imageChangeCntMAX)
 		{
 			//強制的に左を向く
-			if (player1.imagekind < 3 || player1.imagekind >= 5)
+			if (CHOICE_PLAYER1.imagekind < 3 || CHOICE_PLAYER1.imagekind >= 5)
 			{
-				player1.imagekind = 3;
+				CHOICE_PLAYER1.imagekind = 3;
 			}
 			else
 			{
 				//左を向いている
-				player1.imagekind++;
+				CHOICE_PLAYER1.imagekind++;
 			}
 
-			player1.imageChangeCnt = 0;
+			CHOICE_PLAYER1.imageChangeCnt = 0;
 		}
 		else
 		{
-			player1.imageChangeCnt++;
+			CHOICE_PLAYER1.imageChangeCnt++;
 		}
 
 		//右に移動
-		player1.X--;
+		CHOICE_PLAYER1.X--;
 	}
 
 
 	//Dで右を向く
 	if (MY_KEY_DOWN(KEY_INPUT_D) == TRUE)
 	{
-		if (player1.imageChangeCnt == player1.imageChangeCntMAX)
+		if (CHOICE_PLAYER1.imageChangeCnt == CHOICE_PLAYER1.imageChangeCntMAX)
 		{
 
 			//強制的に右を向く
-			if (player1.imagekind < 6 || player1.imagekind >= 8)
+			if (CHOICE_PLAYER1.imagekind < 6 || CHOICE_PLAYER1.imagekind >= 8)
 			{
-				player1.imagekind = 6;
+				CHOICE_PLAYER1.imagekind = 6;
 			}
 			else
 			{
 				//右を向いている
-				player1.imagekind++;
+				CHOICE_PLAYER1.imagekind++;
 			}
-			player1.imageChangeCnt = 0;
+			CHOICE_PLAYER1.imageChangeCnt = 0;
 		}
 		else
 		{
-			player1.imageChangeCnt++;
+			CHOICE_PLAYER1.imageChangeCnt++;
 		}
 		//左に移動
-		player1.X++;
+		CHOICE_PLAYER1.X++;
 
 	}
 	
+	//Jで左を向く
+	if (MY_KEY_DOWN(KEY_INPUT_J) == TRUE)
+	{
+		if (CHOICE_PLAYER2.imageChangeCnt == CHOICE_PLAYER2.imageChangeCntMAX)
+		{
+			//強制的に左を向く
+			if (CHOICE_PLAYER2.imagekind < 3 || CHOICE_PLAYER2.imagekind >= 5)
+			{
+				CHOICE_PLAYER2.imagekind = 3;
+			}
+			else
+			{
+				//左を向いている
+				CHOICE_PLAYER2.imagekind++;
+			}
+
+			CHOICE_PLAYER2.imageChangeCnt = 0;
+		}
+		else
+		{
+			CHOICE_PLAYER2.imageChangeCnt++;
+		}
+
+		//右に移動
+		CHOICE_PLAYER2.X--;
+	}
+
+
+	//Lで右を向く
+	if (MY_KEY_DOWN(KEY_INPUT_L) == TRUE)
+	{
+		if (CHOICE_PLAYER2.imageChangeCnt == CHOICE_PLAYER2.imageChangeCntMAX)
+		{
+
+			//強制的に右を向く
+			if (CHOICE_PLAYER2.imagekind < 6 || CHOICE_PLAYER2.imagekind >= 8)
+			{
+				CHOICE_PLAYER2.imagekind = 6;
+			}
+			else
+			{
+				//右を向いている
+				CHOICE_PLAYER2.imagekind++;
+			}
+			CHOICE_PLAYER2.imageChangeCnt = 0;
+		}
+		else
+		{
+			CHOICE_PLAYER2.imageChangeCnt++;
+		}
+		//左に移動
+		CHOICE_PLAYER2.X++;
+
+	}
+
 	
 
 	return;
@@ -1232,25 +1350,51 @@ BOOL IsMAP_JUMP(VOID)
 	BOOL check = FALSE;//地面に当たったかチェック
 
 	//地面の判定（地面に当たっているとき）
-	if (MY_CHECK_MAP1_PLAYER_COLL(player1.coll) == TRUE)
+	if (MY_CHECK_MAP1_PLAYER_COLL(CHOICE_PLAYER1.coll) == TRUE)
 	{
-		while (MY_CHECK_MAP1_PLAYER_COLL(player1.coll) == TRUE)
+		while (MY_CHECK_MAP1_PLAYER_COLL(CHOICE_PLAYER1.coll) == TRUE)
 		{
 
 
 			//もとに戻すめり込んだ分を戻す
-			player1.Y--;
+			CHOICE_PLAYER1.Y--;
 
 			//当たり判定を更新
-			player1.coll.left = player1.X;
-			player1.coll.right = player1.X + player1.width;
-			player1.coll.top = player1.Y;
-			player1.coll.bottom = player1.Y + player1.height;
+			CHOICE_PLAYER1.coll.left = CHOICE_PLAYER1.X;
+			CHOICE_PLAYER1.coll.right = CHOICE_PLAYER1.X + CHOICE_PLAYER1.width;
+			CHOICE_PLAYER1.coll.top = CHOICE_PLAYER1.Y;
+			CHOICE_PLAYER1.coll.bottom = CHOICE_PLAYER1.Y + CHOICE_PLAYER1.height;
 		}
 		check = TRUE;//地面に当たった
 	}
 	return check;
 }
+
+BOOL IsMAP_JUMP2(VOID)
+{
+	BOOL check = FALSE;//地面に当たったかチェック
+
+	//地面の判定（地面に当たっているとき）
+	if (MY_CHECK_MAP1_PLAYER_COLL(CHOICE_PLAYER2.coll) == TRUE)
+	{
+		while (MY_CHECK_MAP1_PLAYER_COLL(CHOICE_PLAYER2.coll) == TRUE)
+		{
+
+
+			//もとに戻すめり込んだ分を戻す
+			CHOICE_PLAYER2.Y--;
+
+			//当たり判定を更新
+			CHOICE_PLAYER2.coll.left = CHOICE_PLAYER2.X;
+			CHOICE_PLAYER2.coll.right = CHOICE_PLAYER2.X + CHOICE_PLAYER2.width;
+			CHOICE_PLAYER2.coll.top = CHOICE_PLAYER2.Y;
+			CHOICE_PLAYER2.coll.bottom = CHOICE_PLAYER2.Y + CHOICE_PLAYER2.height;
+		}
+		check = TRUE;//地面に当たった
+	}
+	return check;
+}
+
 
 //プレイ画面の描画
 VOID MY_PLAY_DRAW(VOID)
@@ -1303,11 +1447,14 @@ VOID MY_PLAY_DRAW(VOID)
 				}
 			}
 		}
-		//プレイヤの描画
-		DrawGraph(player1.X, player1.Y, player1.handle[player1.imagekind], TRUE);
+		//プレイヤ1の描画
+		DrawGraph(CHOICE_PLAYER1.X, CHOICE_PLAYER1.Y, CHOICE_PLAYER1.handle[CHOICE_PLAYER1.imagekind], TRUE);
+		//プレイヤ2の描画
+		DrawGraph(CHOICE_PLAYER2.X, CHOICE_PLAYER2.Y, CHOICE_PLAYER2.handle[CHOICE_PLAYER2.imagekind], TRUE);
 
 		//当たり判定描画（デバッグ）----------------△
-		DrawBox(player1.coll.left, player1.coll.top, player1.coll.right, player1.coll.bottom, GetColor(255, 0, 0), FALSE);
+		DrawBox(CHOICE_PLAYER1.coll.left, CHOICE_PLAYER1.coll.top, CHOICE_PLAYER1.coll.right, CHOICE_PLAYER1.coll.bottom, GetColor(255, 0, 0), FALSE);
+		DrawBox(CHOICE_PLAYER2.coll.left, CHOICE_PLAYER2.coll.top, CHOICE_PLAYER2.coll.right, CHOICE_PLAYER2.coll.bottom, GetColor(255, 0, 0), FALSE);
 
 
 
@@ -1371,6 +1518,14 @@ VOID MY_RUSULT_PROC(VOID)
 		PlaySoundMem(BGM_RUSULT.handle, DX_PLAYTYPE_LOOP);
 	}
 
+	if (MY_KEY_UP(KEY_INPUT_DOWN) == TRUE)//右を押したら
+	{
+		R_NOW_coice = (R_NOW_coice + 1) % Rusult_Num;//選択状態を一つ下に
+	}
+	if (MY_KEY_UP(KEY_INPUT_UP) == TRUE)//左を押されたら
+	{
+		R_NOW_coice = (R_NOW_coice + (Rusult_Num - 1)) % Rusult_Num;//選択状態を一つ上げる
+	}
 
 
 	return;
@@ -1384,6 +1539,21 @@ VOID MY_RUSULT_DRAW(VOID)
 	DrawString(100,500,"もう一度",GetColor(255,255,255));
 	DrawString(200,500,"選択画面からやり直す",GetColor(255,255,255));
 	DrawString(400,500,"終わる",GetColor(255,255,255));
+
+	switch (Rusult_Num)
+	{
+	case Rusult_Play:
+		R_coice_x = Rusult_Play_x;
+		break;
+	case Rusult_Coice:
+		R_coice_x = Rusult_Coice_x;
+		break;
+	case Rusult_End:
+		R_coice_x = Rusult_End_x;
+		break;
+	}
+
+	DrawString(R_coice_x, 500, "★", GetColor(255, 255, 0));
 
 	DrawString(0, 0, "リザルト画面(Kを押して下さい)", GetColor(255, 255, 255));
 

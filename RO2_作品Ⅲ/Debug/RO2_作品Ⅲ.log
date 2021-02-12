@@ -1,5 +1,5 @@
 ﻿  sakuhin.cpp
-C:\Users\g19014\source\repos\RO2_作品Ⅲ\sakuhin.cpp(425,2): warning C4091: 'typedef ': 変数が何も宣言されていないときは、'<unnamed-enum-Start_Coice>' の左辺を無視します。
-C:\Users\g19014\source\repos\RO2_作品Ⅲ\sakuhin.cpp(447,2): warning C4091: 'typedef ': 変数が何も宣言されていないときは、'<unnamed-enum-Coice_ken>' の左辺を無視します。
-C:\Users\g19014\source\repos\RO2_作品Ⅲ\sakuhin.cpp(467,2): warning C4091: 'typedef ': 変数が何も宣言されていないときは、'<unnamed-enum-Rusult_Play>' の左辺を無視します。
+C:\Users\g19014\source\repos\RO2_作品Ⅲ\sakuhin.cpp(426,2): warning C4091: 'typedef ': 変数が何も宣言されていないときは、'<unnamed-enum-Start_Coice>' の左辺を無視します。
+C:\Users\g19014\source\repos\RO2_作品Ⅲ\sakuhin.cpp(448,2): warning C4091: 'typedef ': 変数が何も宣言されていないときは、'<unnamed-enum-Coice_ken>' の左辺を無視します。
+C:\Users\g19014\source\repos\RO2_作品Ⅲ\sakuhin.cpp(468,2): warning C4091: 'typedef ': 変数が何も宣言されていないときは、'<unnamed-enum-Rusult_Play>' の左辺を無視します。
   RO2_作品Ⅲ.vcxproj -> C:\Users\g19014\source\repos\RO2_作品Ⅲ\Debug\RO2_作品Ⅲ.exe
